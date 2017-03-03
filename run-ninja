@@ -53,6 +53,7 @@ def write_ninja(fd, steps):
     writer.close()
 
 def run(arguments, ninja_file, module):
+    returncode = 0
     try:
         subprocess.check_call([
              "ninja", "-v", "-d", "explain", "-j", "1", 
