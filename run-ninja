@@ -17,6 +17,9 @@ def main():
     parser.add_argument(
         "--output", "-o", help="Output path of the build.ninja")
     parser.add_argument(
+        "--list", "-l", action="store_true",
+        help="List targets by their rule or depth in the DAG")
+    parser.add_argument(
         "--graph", "-g", 
         help="Generate a PDF of the targets graph (requires Graphviz)")
     arguments = parser.parse_args()
@@ -36,6 +39,8 @@ def main():
     
     if arguments.graph is not None:
         returncode = graph(arguments, ninja_file)
+    elif arguments.list:
+        returncode = targets(arguments, ninja_file)
     else:
         returncode = run(arguments, ninja_file, module)
     
@@ -80,6 +85,19 @@ def graph(arguments, ninja_file):
     ninja_graph.poll()
     
     return max(ninja_graph.returncode, dot.returncode)
+
+def targets(arguments, ninja_file):
+    returncode = 0
+    try:
+        subprocess.check_call(
+            ["ninja", "-f", ninja_file, "-t", "targets", "all"])
+    except subprocess.CalledProcessError as e:
+        returncode = e.returncode
+    finally:
+        if arguments.output is None:
+            os.remove(ninja_file)
+    
+    return returncode
 
 if __name__ == "__main__":
     sys.exit(main())
