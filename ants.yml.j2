@@ -1,0 +1,61 @@
+{#
+Macros for common ANTs tasks:
+* Registration, both rigid and SyN
+* Application of transformations
+#}
+
+{# Return a step calling antsRegistrationSyN.sh #}
+{%- macro register(fixed, moving, prefix, suffixes, transform_type) -%}
+targets:
+{%- for suffix in suffixes %}
+  - {{ prefix }}{{ suffix }} 
+{%- endfor %}
+prerequisites:
+  - {{ fixed }} 
+  - {{ moving }}
+recipe:
+  - antsRegistrationSyN.sh -n {{ slots|default(1) }} -t {{ transform_type }} -f {{ fixed }} -m {{ moving }} -o {{ prefix }}
+{%- endmacro -%}
+
+{# Return a step performing a rigid registration using antsRegistrationSyN.sh #}
+{%- macro rigid_register(fixed, moving, prefix) -%}
+{{ register(
+	fixed, moving, prefix, ["0GenericAffine.mat", "Warped.nii.gz"], "r") }}
+{%- endmacro -%}
+
+{# Return a step performing a SyN registration using antsRegistrationSyN.sh #}
+{%- macro syn_register(fixed, moving, prefix) -%}
+{{ register(
+  fixed, moving, prefix, [
+    "0GenericAffine.mat", "1Warp.nii.gz", "1InverseWarp.nii.gz", "Warped.nii.gz"
+  ], "s") }}
+{%- endmacro -%}
+
+{# 
+Return the transform files used by a SyN tranformation, in reverse order of
+application, separated by an optional separator.
+
+For example:
+
+antsApplyTransforms -i source.nii -r ref.nii -o dest.nii {{ syn_transforms("in_source", "-t ") }}
+#}
+{%- macro syn_transforms(root, separator="") -%}
+  {% for suffix in ["1Warp.nii.gz", "0GenericAffine.mat"] -%}
+    {{ separator }}{{ root }}{{ suffix }}{{ " " if not loop.last }}
+  {%- endfor %}
+{%- endmacro -%}
+
+{# Return a step appling transforms #}
+{% macro apply_transforms(source, reference, destination, transforms) -%}
+targets: {{ destination }}
+prerequisites: {{ ([source]+transforms)|json }}
+recipe:
+  - antsApplyTransforms -i {{ source }} -r {{ reference }} -o {{ destination }} -n BSpline {% for transform in transforms %}-t {{ transform }} {% endfor %}
+{%- endmacro -%}
+
+{# Return a step appling a SyN transform #}
+{% macro apply_syn_transforms(source, reference, destination, prefix) -%}
+{{ apply_transforms(
+    source, reference, destination, 
+    [prefix+"1Warp.nii.gz", prefix+"0GenericAffine.mat"])}}
+{%- endmacro -%}
