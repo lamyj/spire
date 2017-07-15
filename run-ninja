@@ -22,22 +22,9 @@ def main():
     ) = parse_arguments()
     
     environment = get_jinja_environment(arguments, known_ninja_arguments)
-    
-    template = environment.get_template(arguments.pipeline)
-    rendered = template.render(**jinja_arguments)
-    pipeline = yaml.load(rendered)
-    # print(pipeline["steps"][-7]["recipe"])
-    # return
-    
-    ninja_file = render_ninja(pipeline)
-    # print(ninja_file)
-    
-    process = subprocess.Popen(
-        ["ninja", "-f", "/dev/stdin"]+raw_ninja_arguments, 
-        stdin=subprocess.PIPE)
-    process.communicate(ninja_file)
-    
-    return process.returncode
+    pipeline = parse_pipeline(arguments, jinja_arguments, environment)
+    ninja_file = render_ninja(pipeline, environment)
+    return run_ninja(ninja_file, raw_ninja_arguments)
 
 def parse_arguments():
     """ Return the runner-specific, Jinja-specific and Ninja-specific (both raw
@@ -85,7 +72,12 @@ def parse_arguments():
     return arguments, jinja_arguments, raw_ninja_arguments, known_ninja_arguments
 
 def get_jinja_environment(arguments, known_ninja_arguments): 
-    """Return the Jinja environment."""
+    """ Return a Jinja environment which:
+        * can load templates from absolute paths, from the directory of the 
+          pipeline description and from the directory of this script
+        * contains a `glob` function mapping to `glob.glob`
+        * has filters to transform to JSON and YAML
+    """
     
     loader = jinja2.FileSystemLoader([
         "/",
@@ -104,30 +96,83 @@ def get_jinja_environment(arguments, known_ninja_arguments):
     
     return environment
 
-def render_ninja(pipeline):
-    """Render the Ninja file."""
+def parse_pipeline(arguments, jinja_arguments, environment):
+    """ Parse the Jinja+YAML pipeline description, normalize scalar items to 
+        lists, and add a mapping from step ids to steps.
+    """
+    
+    template = environment.get_template(arguments.pipeline)
+    rendered = template.render(**jinja_arguments)
+    pipeline = yaml.load(rendered)
+    for step in pipeline["steps"]:
+        for key in ["prerequisites", "targets", "recipe"]:
+            if key in step and isinstance(step[key], basestring):
+                step[key] = [step[key]]
+    
+    pipeline["steps_dictionary"] = {}
+    for step in pipeline["steps"]:
+        if step["id"] in pipeline["steps_dictionary"]:
+            raise Exception("Duplicate step: {}".format(step["id"]))
+        else:
+            pipeline["steps_dictionary"][step["id"]] = step
+    
+    return pipeline
+
+def render_ninja(pipeline, environment):
+    """Render the Ninja file (rules, builds, and references)."""
+    
+    # Reconfigure the environment with the markup for second-stage templating.
+    variable_string = (
+        environment.variable_start_string, environment.variable_end_string)
+    environment.variable_start_string = "$(("
+    environment.variable_end_string = "))"
+    
     fd = StringIO.StringIO()
     writer = ninja.Writer(fd)
     
-    for index, step in enumerate(pipeline.get("steps", [])):
-        rule_name = step.get("id", "step_{}".format(1+index))
+    for step in pipeline.get("steps", []):
+        # Parse references in prerequisites and recipe
+        for member in ["prerequisites", "recipe"]:
+            step[member] = [
+                parse_references(pipeline, step, x, environment) 
+                for x in step[member]]
         
         if step.get("phony"):
+            # Phony build steps have no rule
             writer.build(step["targets"], "phony", step["prerequisites"])
         else: 
-            recipe = step["recipe"]
-            if isinstance(recipe, basestring):
-                recipe = [recipe]
-            # User need not know we are using ninja: escape the $
-            recipe = [x.replace("$", "$$") for x in recipe]
-            
-            writer.rule(rule_name, " ; ".join(recipe))
-            writer.build(step["targets"], rule_name, step["prerequisites"])
+            writer.rule(step["id"], " ; ".join(step["recipe"]))
+            writer.build(step["targets"], step["id"], step["prerequisites"])
 
     data = fd.getvalue()
     writer.close()
     
+    # Restore environment
+    environment.variable_start_string = variable_string[0]
+    environment.variable_end_string = variable_string[1]
+    
     return data
+
+def parse_references(pipeline, current_step, data, environment):
+    """Parse the references contained in data to other parts of the pipeline."""
+    
+    return environment.from_string(data).render(
+        prerequisites=current_step["prerequisites"],
+        targets=current_step["targets"],
+        recipe=current_step["recipe"],
+        **pipeline["steps_dictionary"])
+
+def run_ninja(ninja_file, raw_ninja_arguments):
+    """ Run Ninja using the file generated from the pipeline and the 
+        command-line arguments.
+    """
+    
+    process = subprocess.Popen(
+        ["ninja", "-f", "/dev/stdin"]+raw_ninja_arguments, 
+        stdin=subprocess.PIPE)
+    process.communicate(ninja_file)
+    
+    return process.returncode
 
 if __name__ == "__main__":
     sys.exit(main())
