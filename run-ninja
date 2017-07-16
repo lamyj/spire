@@ -104,10 +104,6 @@ def parse_pipeline(arguments, jinja_arguments, environment):
     template = environment.get_template(arguments.pipeline)
     rendered = template.render(**jinja_arguments)
     pipeline = yaml.load(rendered)
-    for step in pipeline["steps"]:
-        for key in ["prerequisites", "targets", "recipe"]:
-            if key in step and isinstance(step[key], basestring):
-                step[key] = [step[key]]
     
     pipeline["steps_dictionary"] = {}
     for step in pipeline["steps"]:
@@ -116,26 +112,45 @@ def parse_pipeline(arguments, jinja_arguments, environment):
         else:
             pipeline["steps_dictionary"][step["id"]] = step
     
-    return pipeline
-
-def render_ninja(pipeline, environment):
-    """Render the Ninja file (rules, builds, and references)."""
-    
     # Reconfigure the environment with the markup for second-stage templating.
     variable_string = (
         environment.variable_start_string, environment.variable_end_string)
     environment.variable_start_string = "$(("
     environment.variable_end_string = "))"
     
+    # Parse references in prerequisites, targets and recipe, and normalize 
+    # scalars to lists
+    for step in pipeline.get("steps", []):
+        for member in ["prerequisites", "targets", "recipe"]:
+            transform = (
+                yaml.load if member in ["prerequisites", "targets"]
+                else lambda x: x)
+            if member not in step:
+                continue
+            if isinstance(step[member], basestring):
+                step[member] = transform(
+                    parse_references(pipeline, step, step[member], environment))
+                if isinstance(step[member], basestring):
+                    step[member] = [step[member]]
+            else:
+                step[member] = [
+                    transform(parse_references(pipeline, step, x, environment))
+                    for x in step[member]]
+    
+    # Restore environment
+    environment.variable_start_string = variable_string[0]
+    environment.variable_end_string = variable_string[1]
+    
+    return pipeline
+
+def render_ninja(pipeline, environment):
+    """Render the Ninja file (rules, builds, and references)."""
+    
     fd = StringIO.StringIO()
     writer = ninja.Writer(fd)
     
     for step in pipeline.get("steps", []):
-        # Parse references in prerequisites and recipe
-        for member in ["prerequisites", "recipe"]:
-            step[member] = [
-                parse_references(pipeline, step, x, environment) 
-                for x in step[member]]
+        # print(step)
         
         if step.get("phony"):
             # Phony build steps have no rule
@@ -146,10 +161,6 @@ def render_ninja(pipeline, environment):
 
     data = fd.getvalue()
     writer.close()
-    
-    # Restore environment
-    environment.variable_start_string = variable_string[0]
-    environment.variable_end_string = variable_string[1]
     
     return data
 
