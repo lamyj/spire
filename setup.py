@@ -26,7 +26,7 @@ try:
         author="Julien Lamy",
         author_email="lamy@unistra.fr",
         
-        license="MIT", # TODO
+        license="MIT",
         
         classifiers=[
             "Development Status :: 4 - Beta",
@@ -39,7 +39,7 @@ try:
             "Topic :: Software Development :: Build Tools",
             "Topic :: Scientific/Engineering",
             
-            "License :: OSI Approved :: MIT License", # TODO
+            "License :: OSI Approved :: MIT License",
             
             "Programming Language :: Python :: 2",
             "Programming Language :: Python :: 3",
