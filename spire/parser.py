@@ -1,5 +1,14 @@
 import yaml
 
+try:
+    unicode
+except NameError:
+    # 'unicode' is undefined: Python 3
+    basestring = (str,bytes)
+else:
+    # 'unicode' exists: Python 2
+    pass
+
 def parse_pipeline(arguments, jinja_arguments, environment):
     """ Parse the Jinja+YAML pipeline description, normalize scalar items to 
         lists, and add a mapping from step ids to steps.

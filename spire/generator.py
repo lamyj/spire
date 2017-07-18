@@ -1,11 +1,14 @@
-import StringIO
+try:
+    from StringIO import StringIO
+except ImportError:
+    from io import StringIO
 
-import ninja
+from . import ninja
 
 def render_ninja(pipeline, environment):
     """Render the Ninja file (rules, builds, and references)."""
     
-    fd = StringIO.StringIO()
+    fd = StringIO()
     writer = ninja.Writer(fd)
     
     for step in pipeline.get("steps", []):

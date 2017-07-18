@@ -8,9 +8,9 @@ import jinja2
 import pkg_resources
 import yaml
 
-from generator import render_ninja
-from parser import parse_pipeline
-from runner import run_ninja
+from .generator import render_ninja
+from .parser import parse_pipeline
+from .runner import run_ninja
 
 def main():
     
