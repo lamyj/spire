@@ -45,7 +45,7 @@ try:
             "Programming Language :: Python :: 3",
         ],
         
-        keywords="pipeline workflow", # TODO
+        keywords="pipeline, workflow, task execution"
 
         packages=find_packages(exclude=["doc", "modules", "tests"]),
         install_requires=["jinja2", "pyyaml"],
