@@ -5,6 +5,7 @@ import os
 import sys
 
 import jinja2
+import pkg_resources
 import yaml
 
 from generator import render_ninja
@@ -79,7 +80,8 @@ def get_jinja_environment(arguments, known_ninja_arguments):
     loader = jinja2.FileSystemLoader([
         "/",
         os.path.abspath(os.path.dirname(arguments.pipeline)),
-        os.path.abspath(os.path.dirname(__file__)),
+        pkg_resources.resource_filename(
+            pkg_resources.Requirement.parse(__name__), "modules")
     ])
        
     environment = jinja2.Environment(loader=loader, keep_trailing_newline=True)
