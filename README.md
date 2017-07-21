@@ -4,6 +4,8 @@ Spire is a pipeline runner based on [YAML](https://en.wikipedia.org/wiki/YAML) f
 
 ## Quickstart
 
+Install Ninja, following [official instructions](https://github.com/ninja-build/ninja/wiki/Pre-built-Ninja-packages).
+
 From the source directory, use `pip` to ensure that dependencies are installed along with Spire:
 ```
 pip install .
@@ -49,6 +51,31 @@ The following willl parse `build.yml.j2` with the variable `root` containing the
 ```bash
 spire build.yml.j2 root=$(pwd) -- foo
 ```
+
+# Rationale
+
+Pipeline or workflow runners range from large-scale runners (CWL, VIP) to ad-hoc solutions based on e.g. Python or MATLAB scripts. 
+
+Why another workflow description/runner? (CWL, VIP, MOTEUR, Boutiques, etc.)
+Easy to deploy (VIP et al.)
+Do not re-run existing steps (CWL)
+
+**TODO**: explain why not cmake?
+
+Why not Make?
+Makefiles are cumbersome to write (sensitive to tabs and spaces)
+Large lists of prerequisites are not easy to read (explicit line split with `\`)
+Make does not handle well multiple targets (common use case with registration: output of both warped image and transform)
+
+Why not write directly Ninja files?
+Ninja files are static: no way to modularize
+Event when templated to solve previous point, not easier to write than Makefiles
+
+Why YAML representation?
+Easy to write
+Integrates well with generated data (YAML is a superset of JSON)
+
+Why a template engine? Why Jinja? (maybe drop this?)
 
 ## Design
 
