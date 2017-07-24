@@ -43,6 +43,9 @@ def parse_arguments():
     main_parser.add_argument(
         "variables", nargs="*", 
         metavar="variable", help="Jinja variables (name=value)")
+    main_parser.add_argument(
+        "--modules-path", "-m", action="append", default=[],
+        help="Additional search path for modules")
     
     if "--" in sys.argv:
         limit = sys.argv.index("--")
@@ -71,13 +74,14 @@ def parse_arguments():
 
 def get_jinja_environment(arguments, known_ninja_arguments): 
     """ Return a Jinja environment which:
-        * can load templates from absolute paths, from the directory of the 
-          pipeline description and from the directory of this script
+        * can load templates from (in order of priority) user-defined search 
+          paths, absolute paths, the directory of the pipeline description and 
+          the directory of this script
         * contains a `glob` function mapping to `glob.glob`
         * has filters to transform to JSON and YAML
     """
     
-    loader = jinja2.FileSystemLoader([
+    loader = jinja2.FileSystemLoader(arguments.modules_path + [
         "/",
         os.path.abspath(os.path.dirname(arguments.pipeline)),
         pkg_resources.resource_filename(
