@@ -91,9 +91,12 @@ def get_jinja_environment(arguments, known_ninja_arguments):
        
     environment = jinja2.Environment(loader=loader, keep_trailing_newline=True)
     environment.globals.update(
+        basename=os.path.basename,
+        build_directory=known_ninja_arguments.directory,
+        dirname=os.path.dirname,
         glob=lambda x: sorted(
-            x[len(known_ninja_arguments.directory):] for x in 
-            glob.glob(os.path.join(known_ninja_arguments.directory, x)))
+            os.path.relpath(x, known_ninja_arguments.directory) 
+            for x in glob.glob(os.path.join(known_ninja_arguments.directory, x))),
     )
     environment.filters["json"] = lambda x: json.dumps(x)
     environment.filters["yaml"] = lambda x: yaml.dump(x, default_flow_style=False)
