@@ -62,5 +62,5 @@ def parse_references(pipeline, current_step, data, environment):
     return environment.from_string(data).render(
         prerequisites=current_step["prerequisites"],
         targets=current_step["targets"],
-        recipe=current_step["recipe"],
+        recipe=current_step.get("recipe", ""),
         **pipeline["steps_dictionary"])
