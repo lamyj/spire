@@ -1,12 +1,15 @@
 import argparse
 import glob
 import json
+import logging
 import os
 import sys
 
 import jinja2
 import pkg_resources
 import yaml
+
+logger = logging.getLogger(__name__)
 
 from .generator import render_ninja
 from .parser import parse_pipeline
@@ -46,6 +49,9 @@ def parse_arguments():
     main_parser.add_argument(
         "--modules-path", "-m", action="append", default=[],
         help="Additional search path for modules")
+    main_parser.add_argument(
+        "--verbosity", "-v", 
+        choices=["warning", "info", "debug"], default="warning")
     
     if "--" in sys.argv:
         limit = sys.argv.index("--")
@@ -61,6 +67,11 @@ def parse_arguments():
             for x in arguments.variables}
     except Exception as e:
         main_parser.error(e)
+    
+    verbosity = arguments.__dict__.pop("verbosity")
+    logging.basicConfig(
+        level=verbosity.upper(), 
+        format="%(levelname)s - %(name)s: %(message)s")
     
     ninja_parser = argparse.ArgumentParser()
     ninja_parser.add_argument("--directory", "-C", default=os.getcwd())

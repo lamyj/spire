@@ -1,5 +1,7 @@
 import yaml
 
+from . import logger
+
 try:
     unicode
 except NameError:
@@ -16,6 +18,8 @@ def parse_pipeline(arguments, jinja_arguments, environment):
     
     template = environment.get_template(arguments.pipeline)
     rendered = template.render(**jinja_arguments)
+    logger.debug("Rendered pipeline:\n{}\n{}\n{}".format(
+        40*"-", rendered, 40*"-"))
     pipeline = yaml.load(rendered)
     
     pipeline["steps_dictionary"] = {}
@@ -53,6 +57,9 @@ def parse_pipeline(arguments, jinja_arguments, environment):
     # Restore environment
     environment.variable_start_string = variable_string[0]
     environment.variable_end_string = variable_string[1]
+    
+    logger.debug("Final pipeline:\n{}\n{}\n{}".format(
+        40*"-", yaml.safe_dump(pipeline["steps"]), 40*"-"))
     
     return pipeline
 
