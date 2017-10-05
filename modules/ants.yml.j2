@@ -94,9 +94,9 @@ antsApplyTransforms -i source.nii -r ref.nii -o dest.nii {{ syn_transforms("in_s
 targets: {{ destination }}
 prerequisites: {{ ([source]+transforms)|json }}
 recipe:
-  - {{ apply_transforms_recipe(
+  {{ apply_transforms_recipe(
         source, reference, destination, transforms, 
-        interpolation, input_image_type) }}
+        interpolation, input_image_type)|indent(2) }}
 {%- endmacro -%}
 
 {# Return a step appling a SyN transform #}
