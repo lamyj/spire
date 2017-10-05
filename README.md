@@ -25,7 +25,7 @@ The YAML content can be templated using Jinja, with extra features:
 * Function to perform globbing in the directory where the build will be executed (`glob("*.c")`)
 * The `basename` and `dirname` functions from the Python module `os.path`
 * The current build directory (`build_directory`)
-* References to the targets or prerequisites of the current step (`$(( prerequisites))`, `$(( targets ))`) or of another step, specified by its identifier (`$(( other_step_id.prerequisites ))`, `$(( other_step_id.targets ))`). These references can be used with usual Jinja filters, e.g. `$(( prerequisites|join(" ") ))`
+* References to the targets or prerequisites of the current step (`$(( prerequisites))`, `$(( targets ))`) or of another step, specified by its identifier (`$(( other_step_id.prerequisites ))`, `$(( other_step_id.targets ))`). These references can be used with usual Jinja filters, e.g. `$(( prerequisites|join(" ") ))`. The references may also be used in "regular" Jinja expressions, i.e. surrounded by braces: `{{ "$(( targets[0] ))" }}`.
 
 The following example demonstrates most of those features. The first step looks for `.c` files and compile them to `.o`; the second step links them together to build an executable.
 
