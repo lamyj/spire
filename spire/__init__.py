@@ -108,6 +108,7 @@ def get_jinja_environment(arguments, known_ninja_arguments):
         glob=lambda x: sorted(
             os.path.relpath(x, known_ninja_arguments.directory) 
             for x in glob.glob(os.path.join(known_ninja_arguments.directory, x))),
+        pipeline_directory=os.path.abspath(os.path.dirname(arguments.pipeline)),
     )
     environment.filters["json"] = lambda x: json.dumps(x)
     environment.filters["yaml"] = lambda x: yaml.dump(x, default_flow_style=False)
