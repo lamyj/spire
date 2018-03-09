@@ -106,7 +106,8 @@ def get_jinja_environment(arguments, known_ninja_arguments):
         build_directory=known_ninja_arguments.directory,
         dirname=os.path.dirname,
         glob=lambda x: sorted(
-            os.path.relpath(x, known_ninja_arguments.directory) 
+            x if os.path.isabs(x) 
+            else os.path.relpath(x, known_ninja_arguments.directory) 
             for x in glob.glob(os.path.join(known_ninja_arguments.directory, x))),
         pipeline_directory=os.path.abspath(os.path.dirname(arguments.pipeline)),
     )
