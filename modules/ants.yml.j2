@@ -5,34 +5,34 @@ Macros for common ANTs tasks:
 #}
 
 {# Return a step calling antsRegistrationSyN.sh #}
-{%- macro register_targets(fixed, moving, prefix, suffixes, transform_type) -%}
+{%- macro register_outputs(fixed, moving, prefix, suffixes, transform_type) -%}
 {%- for suffix in suffixes %}
 - {{ prefix }}{{ suffix }} 
 {%- endfor %}
 {%- endmacro -%}
 
-{%- macro register_recipe(fixed, moving, prefix, suffixes, transform_type) -%}
+{%- macro register_commands(fixed, moving, prefix, suffixes, transform_type) -%}
 - antsRegistrationSyN.sh -n {{ slots|default(1) }} -t {{ transform_type }} -f {{ fixed }} -m {{ moving }} -o {{ prefix }}
 {%- endmacro -%}
 
 {%- macro register(fixed, moving, prefix, suffixes, transform_type) -%}
-targets:
-  {{ register_targets(fixed, moving, prefix, suffixes, transform_type)|indent(2) }}
-prerequisites:
+outputs:
+  {{ register_outputs(fixed, moving, prefix, suffixes, transform_type)|indent(2) }}
+inputs:
   - {{ fixed }} 
   - {{ moving }}
-recipe:
-  {{ register_recipe(fixed, moving, prefix, suffixes, transform_type) }}
+commands:
+  {{ register_commands(fixed, moving, prefix, suffixes, transform_type) }}
 {%- endmacro -%}
 
 {# Return a step performing a rigid registration using antsRegistrationSyN.sh #}
-{%- macro rigid_register_targets(fixed, moving, prefix) -%}
-{{ register_targets(
+{%- macro rigid_register_outputs(fixed, moving, prefix) -%}
+{{ register_outputs(
 	fixed, moving, prefix, ["0GenericAffine.mat", "Warped.nii.gz"], "r") }}
 {%- endmacro -%}
 
-{%- macro rigid_register_recipe(fixed, moving, prefix) -%}
-{{ register_recipe(
+{%- macro rigid_register_commands(fixed, moving, prefix) -%}
+{{ register_commands(
 	fixed, moving, prefix, ["0GenericAffine.mat", "Warped.nii.gz"], "r") }}
 {%- endmacro -%}
 
@@ -42,15 +42,15 @@ recipe:
 {%- endmacro -%}
 
 {# Return a step performing a SyN registration using antsRegistrationSyN.sh #}
-{%- macro syn_register_targets(fixed, moving, prefix) -%}
-{{ register_targets(
+{%- macro syn_register_outputs(fixed, moving, prefix) -%}
+{{ register_outputs(
 	fixed, moving, prefix, [
     "0GenericAffine.mat", "1Warp.nii.gz", "1InverseWarp.nii.gz", "Warped.nii.gz"
   ], "s") }}
 {%- endmacro -%}
 
-{%- macro syn_register_recipe(fixed, moving, prefix) -%}
-{{ register_recipe(
+{%- macro syn_register_commands(fixed, moving, prefix) -%}
+{{ register_commands(
 	fixed, moving, prefix, [
     "0GenericAffine.mat", "1Warp.nii.gz", "1InverseWarp.nii.gz", "Warped.nii.gz"
   ], "s") }}
@@ -79,7 +79,7 @@ antsApplyTransforms -i source.nii -r ref.nii -o dest.nii {{ syn_transforms("in_s
 {%- endmacro -%}
 
 {# Return a step appling transforms #}
-{% macro apply_transforms_recipe(
+{% macro apply_transforms_commands(
     source, reference, destination, transforms, 
     interpolation="BSpline", input_image_type="scalar") -%}
 - antsApplyTransforms {#
@@ -91,10 +91,10 @@ antsApplyTransforms -i source.nii -r ref.nii -o dest.nii {{ syn_transforms("in_s
 {% macro apply_transforms(
     source, reference, destination, transforms, 
     interpolation="BSpline", input_image_type="scalar") -%}
-targets: {{ destination }}
-prerequisites: {{ ([source]+transforms)|json }}
-recipe:
-  {{ apply_transforms_recipe(
+outputs: {{ destination }}
+inputs: {{ ([source]+transforms)|json }}
+commands:
+  {{ apply_transforms_commands(
         source, reference, destination, transforms, 
         interpolation, input_image_type)|indent(2) }}
 {%- endmacro -%}

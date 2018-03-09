@@ -14,10 +14,10 @@ def render_ninja(pipeline, environment):
     for step in pipeline.get("steps", []):
         if step.get("phony"):
             # Phony build steps have no rule
-            writer.build(step["targets"], "phony", step["prerequisites"])
+            writer.build(step["outputs"], "phony", step["inputs"])
         else: 
-            writer.rule(step["id"], " ; ".join(step["recipe"]))
-            writer.build(step["targets"], step["id"], step["prerequisites"])
+            writer.rule(step["id"], " ; ".join(step["commands"]))
+            writer.build(step["outputs"], step["id"], step["inputs"])
 
     data = fd.getvalue()
     writer.close()
