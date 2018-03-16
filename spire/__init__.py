@@ -105,10 +105,11 @@ def get_jinja_environment(arguments, known_ninja_arguments):
         basename=os.path.basename,
         build_directory=known_ninja_arguments.directory,
         dirname=os.path.dirname,
-        glob=lambda x: sorted(
-            x if os.path.isabs(x) 
+        glob=lambda pathname: sorted(
+            x if os.path.isabs(pathname) 
             else os.path.relpath(x, known_ninja_arguments.directory) 
-            for x in glob.glob(os.path.join(known_ninja_arguments.directory, x))),
+            for x in glob.glob(
+                os.path.join(known_ninja_arguments.directory, pathname))),
         pipeline_directory=os.path.abspath(os.path.dirname(arguments.pipeline)),
     )
     environment.filters["json"] = lambda x: json.dumps(x)
