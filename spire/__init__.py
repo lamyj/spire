@@ -1,4 +1,5 @@
 import argparse
+import csv
 import glob
 import json
 import logging
@@ -110,9 +111,24 @@ def get_jinja_environment(arguments, known_ninja_arguments):
             else os.path.relpath(x, known_ninja_arguments.directory) 
             for x in glob.glob(
                 os.path.join(known_ninja_arguments.directory, pathname))),
+        load_csv=load_csv,
         pipeline_directory=os.path.abspath(os.path.dirname(arguments.pipeline)),
     )
     environment.filters["json"] = lambda x: json.dumps(x)
     environment.filters["yaml"] = lambda x: yaml.dump(x, default_flow_style=False)
     
     return environment
+
+def load_csv(path, *args, **kwargs):
+    """ Load data from a CSV file. Extra arguments are passed to the CSV 
+        reader (e.g. dialect).
+    """
+
+    if not os.path.isfile(path):
+        raise Exception("No such file: \"{}\"".format(path))
+    
+    with open(path) as fd:
+        reader = csv.DictReader(fd, *args, **kwargs)
+        data = list(reader)
+    
+    return data
