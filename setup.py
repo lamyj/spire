@@ -21,7 +21,7 @@ try:
         description="Run software pipelines using YAML files",
         long_description=long_description,
         
-        url="https://ipb-dev.u-strasbg.fr/gitlab/lamy/spire",
+        url="https://github.com/lamyj/spire/",
         
         author="Julien Lamy",
         author_email="lamy@unistra.fr",
