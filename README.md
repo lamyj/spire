@@ -27,6 +27,7 @@ The YAML content can be templated using Jinja, with extra features:
 * The current build directory (`build_directory`)
 * The absolute path to the directory containing the current pipeline (`pipeline_directory`)
 * References to the outputs or inputs of the current step or of another step, specified by its identifier (`{{ inputs("other_step_id") }}`, `{{ outputs("other_step_id") }}`). These references are always list.
+* Functions to load data from a file in CSV, JSON or YAML format (respectively `load_csv`, `load_json`, `load_yaml`).
 
 The following example demonstrates most of those features. The first step looks for `.c` files and compile them to `.o`; the second step links them together to build an executable.
 
