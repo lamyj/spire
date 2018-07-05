@@ -15,8 +15,8 @@ try:
     os.symlink("../modules", "spire/modules")
 
     setup(
-        version="0.5.1",
         name="spire-pipeline",
+        version="0.5.2",
         
         description="Run software pipelines using YAML files",
         long_description=long_description,
