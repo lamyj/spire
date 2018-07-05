@@ -15,8 +15,8 @@ try:
     os.symlink("../modules", "spire/modules")
 
     setup(
-        name="spire",
         version="0.5.1",
+        name="spire-pipeline",
         
         description="Run software pipelines using YAML files",
         long_description=long_description,
@@ -47,7 +47,7 @@ try:
         
         keywords="pipeline, workflow, task execution",
 
-        packages=find_packages(exclude=["doc", "modules", "tests"]),
+        packages=["spire"],
         install_requires=["jinja2", "pyyaml"],
         package_data={ "spire": ["modules/*.yml.j2"] },
         
