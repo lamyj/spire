@@ -16,7 +16,7 @@ try:
 
     setup(
         name="spire-pipeline",
-        version="0.6.0",
+        version="0.6.1",
         
         description="Run software pipelines using YAML files",
         long_description=long_description,
@@ -48,7 +48,7 @@ try:
         
         keywords="pipeline, workflow, task execution",
 
-        packages=["spire"],
+        packages=find_packages(exclude=["doc", "modules", "tests"]),
         install_requires=["jinja2", "pyyaml"],
         package_data={ "spire": ["modules/*.yml.j2"] },
         
