@@ -8,7 +8,7 @@ Install Ninja, following [official instructions](https://github.com/ninja-build/
 
 From the source directory, use `pip` to ensure that dependencies are installed along with Spire:
 ```
-pip install .
+pip install spire-pipeline
 ```
 
 A pipeline description is a templated YAML file containing a list of `steps`, each step having the following fields:
