@@ -11,8 +11,45 @@ Macros for common ANTs tasks:
 {%- endfor %}
 {%- endmacro -%}
 
+{%- macro rigid_registration_stage(fixed, moving) -%}
+--initial-moving-transform '[{{ fixed }},{{ moving }},1]' {#
+#}--transform Rigid[0.1] {#
+#}--metric 'MI[{{ fixed }},{{ moving }},1,32,Regular,0.25]' {#
+#}--convergence [1000x500x250x100,1e-6,10] {#
+#}--shrink-factors 8x4x2x1 {#
+#}--smoothing-sigmas 3x2x1x0vox
+{%- endmacro -%}
+
+{%- macro affine_registration_stage(fixed, moving) -%}
+--transform Affine[0.1] {#
+#}--metric 'MI[{{ fixed }},{{ moving }},1,32,Regular,0.25]' {#
+#}--convergence [1000x500x250x100,1e-6,10] {#
+#}--shrink-factors 8x4x2x1 {#
+#}--smoothing-sigmas 3x2x1x0vox
+{%- endmacro -%}
+
+{%- macro syn_registration_stage(fixed, moving) -%}
+--transform SyN[0.1,3,0] {#
+#}--metric 'CC[{{ fixed }},{{ moving }},1,4]' {#
+#}--convergence [100x70x50x20,1e-6,10] {#
+#}--shrink-factors 8x4x2x1 {#
+#}--smoothing-sigmas 3x2x1x0vox
+{%- endmacro -%}
+
+{# FIXME: slots, use ITK_GLOBAL_DEFAULT_NUMBER_OF_THREADS #}
 {%- macro register_commands(fixed, moving, prefix, suffixes, transform_type) -%}
-- antsRegistrationSyN.sh -n {{ slots|default(1) }} -t {{ transform_type }} -f {{ fixed }} -m {{ moving }} -o {{ prefix }}
+- antsRegistration {#
+    #}--dimensionality 3 --float 0 {#
+    #}--interpolation Linear --winsorize-image-intensities [0.005,0.995] {#
+    #}--use-histogram-matching 0 {#
+    #}--output '[{{ prefix }},{{ prefix }}Warped.nii.gz]' {#
+    #}{% 
+      if transform_type in ["r","s"] 
+        %}{{ rigid_registration_stage(fixed, moving) }} {%
+      endif %}{%
+      if transform_type == "s"
+        %}{{ affine_registration_stage(fixed, moving) }} {{ syn_registration_stage(fixed, moving) }} {%
+      endif %}
 {%- endmacro -%}
 
 {%- macro register(fixed, moving, prefix, suffixes, transform_type) -%}
@@ -83,16 +120,30 @@ antsApplyTransforms -i source.nii -r ref.nii -o dest.nii {{ syn_transforms("in_s
     source, reference, destination, transforms, 
     interpolation="BSpline", input_image_type="scalar") -%}
 - antsApplyTransforms {#
-  #}-i {{ source }} -r {{ reference }} -o {{ destination }} {#
+  #}-i '{{ source }}' -r '{{ reference }}' -o '{{ destination }}' {#
   #}-n {{ interpolation }} -e {{ input_image_type }} {#
-  #}{% for transform in transforms %}-t {{ transform }} {% endfor %}
+  #}{% for transform in transforms 
+    %}-t {% 
+      if transform is string 
+        %}'{{ transform }}'{% 
+      else 
+        %}'[{{ transform|join(",") }}]'{% 
+      endif %} {% endfor %}
 {%- endmacro -%}
 
 {% macro apply_transforms(
     source, reference, destination, transforms, 
     interpolation="BSpline", input_image_type="scalar") -%}
 outputs: {{ destination }}
-inputs: {{ ([source]+transforms)|json }}
+inputs:
+  - {{ source|json }}
+  {% for transform in transforms %}
+    {% if transform is string %}
+  - {{ transform|json }}
+    {% else %}
+  - {{ transform|first|json }}
+    {% endif %}
+  {% endfor %} 
 commands:
   {{ apply_transforms_commands(
         source, reference, destination, transforms, 
