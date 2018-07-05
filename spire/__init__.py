@@ -111,7 +111,7 @@ def get_jinja_environment(arguments, known_ninja_arguments):
             else os.path.relpath(x, known_ninja_arguments.directory) 
             for x in glob.glob(
                 os.path.join(known_ninja_arguments.directory, pathname))),
-        load_csv=load_csv,
+        load_csv=load_csv, load_json=load_json,
         pipeline_directory=os.path.abspath(os.path.dirname(arguments.pipeline)),
     )
     environment.filters["json"] = lambda x: json.dumps(x)
@@ -130,5 +130,18 @@ def load_csv(path, *args, **kwargs):
     with open(path) as fd:
         reader = csv.DictReader(fd, *args, **kwargs)
         data = list(reader)
+    
+    return data
+
+def load_json(path, *args, **kwargs):
+    """ Load data from a JSON file. Extra arguments are passed to the JSON 
+        loader.
+    """
+    
+    if not os.path.isfile(path):
+        raise Exception("No such file: \"{}\"".format(path))
+    
+    with open(path) as fd:
+        data = json.load(fd)
     
     return data
