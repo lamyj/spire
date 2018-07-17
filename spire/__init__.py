@@ -96,6 +96,7 @@ def get_jinja_environment(arguments, known_ninja_arguments):
     loader = jinja2.FileSystemLoader(arguments.modules_path + [
         "/",
         os.path.abspath(os.path.dirname(arguments.pipeline)),
+        os.getcwd(),
         pkg_resources.resource_filename(
             pkg_resources.Requirement.parse("spire-pipeline"), 
             os.path.join(__name__, "modules"))
