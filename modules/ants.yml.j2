@@ -26,6 +26,7 @@ Macros for common ANTs tasks:
 {%- endmacro -%}
 
 {# Return the stages performed by an affine registration step #}
+{%- macro affine_registration_stage(fixed, moving) -%}
 --transform Affine[0.1] {#
 #}--metric 'MI[{{ fixed }},{{ moving }},1,32,Regular,0.25]' {#
 #}--convergence [1000x500x250x100,1e-6,10] {#
