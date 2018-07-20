@@ -16,7 +16,7 @@ try:
 
     setup(
         name="spire-pipeline",
-        version="0.6.2",
+        version="0.6.3",
         
         description="Run software pipelines using YAML files",
         long_description=long_description,
