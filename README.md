@@ -61,21 +61,25 @@ houses = [BuildHouse(material) for material in ["Straw", "Sticks", "Bricks"]]
 
 Tasks with missing dependencies may be skipped instead of being executed and failing. For this, missing dependencies must be specified as `None` entries in `file_dep`, and the function `spire.prune()` must be called. The task graph will be pruned starting at the current task, ensuring that no error will occur on account of these missing targets.
 
-In the following example, if either `brick` or `mortar` is missing, neither `BuildHouse` nor `BuildDogHouse` will be executed: `BuildHouse` will be skipped since `file_dep` contains entries which are `None` and `spire.prune()` was called, and `BuildDogHouse` will be skipped since one of its parent has been skipped. On the other hand, if `brick` and `mortar` are present but `doggie_basket` is missing, `BuildHouse` will be successfully executed but `BuildDogHouse` will fail as none of its `file_dep` equal `None`.
+In the following example, if either `brick` or `mortar` is missing, neither `BuildHouse` nor `BuildDogHouse` will be executed:
+- `BuildHouse` will be skipped since `file_dep` contains entries which are `None` and `spire.prune()` was called
+- `BuildDogHouse` will be skipped since one of its parent has been skipped. 
+
+On the other hand, if `brick` and `mortar` are present but `doggie_basket` is missing, `BuildHouse` will be successfully executed but `BuildDogHouse` will fail as none of its `file_dep` equal `None`.
 
 ```python
 import os
 import spire
 
 class BuildHouse(spire.Task):
-    file_dep = [x is os.path.isfile(x) else None for x in ["brick", "mortar"]]
+    file_dep = [x if os.path.isfile(x) else None for x in ["brick", "mortar"]]
     target = "house"
-    action = action = ["build"] + file_dep  + [target]
+    action = ["build"] + file_dep  + [target]
 
 class BuildDogHouse(spire.Task):
     file_dep = [BuildHouse.target, "doggie_basket"]
     target = "dog_house"
-    action = action = ["build"] + file_dep  + [target]
+    action = ["build"] + file_dep  + [target]
 
 spire.prune()
 ```
@@ -89,28 +93,3 @@ $ python3 -m spire graph tasks.py tasks.dot
 ```
 
 A simplified representation, omitting the targets and dependencies nodes, can be generated py passing the option `--tasks-only`. Any other option will be passed directly to _doit_, e.g. to specify command-line variables.
-
-## Running a sample pipeline
-
-From the directory holding this `README.md` file:
-
-```shell
-ROOT=$(pwd)/data/connectsz_full
-doit run -f connectsz.py -d ${ROOT}/Final scans=${ROOT}/scans.yml
-```
-
-To clean-up (assuming the `ROOT` variable is defined as above):
-
-```shell
-doit clean --forget -f connectsz.py -d ${ROOT}/Final scans=${ROOT}/scans.yml
-```
-
-While running in `connectsz_partial`, note that:
-- The pSSFP _is_ registered to the T1w since we have the first scan
-- The T2 map _is not_ computed since we are missing the second pSSFP scan
-
-Running the DESS pipeline, which involves more command-line arguments with globbing patterns works in a similar way (here we assume that `STUDY` points to the root path of the study).
-
-```shell
-doit run -v 2 -f dess.py images=${STUDY}/*/*/49*/*.nii.gz non_dw_image=${STUDY}/*/*/48*/1.nii.gz -d data/dess
-```
