@@ -1,161 +1,126 @@
-import argparse
-import csv
-import glob
-import json
+import inspect
+import itertools
 import logging
-import os
-import sys
 
-import jinja2
-import pkg_resources
-import yaml
+import doit
 
-logger = logging.getLogger(__name__)
+from .task import Task
+from .task_factory import TaskFactory
+from .task_graph import TaskGraph
 
-from .generator import render_ninja
-from .parser import parse_pipeline
-from .runner import run_ninja
+################################################################################
+# Replace doit's task loader to include objects created by TaskFactory         #
+################################################################################
 
-def main():
+doit_loader_load_tasks = None
+def spire_load_tasks(*args, **kwargs):
+    tasks = doit_loader_load_tasks(*args, **kwargs)
     
-    (
-        arguments, jinja_arguments, 
-        raw_ninja_arguments, known_ninja_arguments
-    ) = parse_arguments()
+    for object_ in TaskFactory._task_registry:
+        if getattr(object_, "skipped", False):
+            continue
+        
+        dict_ = object_.as_task_dict()
+        if dict_ is None:
+            continue
+        
+        dict_["name"] = dict_.pop("basename")
+        # Replace None with "" to avoid an error on task creation
+        dict_["file_dep"] = [x or "" for x in dict_["file_dep"]]
+            
+        tasks.append(doit.task.dict_to_task(dict_))
+            
+    return tasks
     
-    environment = get_jinja_environment(arguments, known_ninja_arguments)
-    pipeline = parse_pipeline(arguments, jinja_arguments, environment)
-    ninja_file = render_ninja(pipeline, environment)
-    return run_ninja(ninja_file, raw_ninja_arguments)
+if doit.loader.load_tasks != spire_load_tasks:
+    doit_loader_load_tasks = doit.loader.load_tasks
+    doit.loader.load_tasks = spire_load_tasks
 
-def parse_arguments():
-    """ Return the runner-specific, Jinja-specific and Ninja-specific (both raw
-        and known) arguments parsed from the command line.
-    """
-    
-    jinja_parser = argparse.ArgumentParser(
-        description="Run Ninja from a pipeline description")
-    jinja_parser.add_argument("pipeline", help="Path to pipeline description")
-    jinja_parser.add_argument(
-        "variables", nargs="*", 
-        metavar="variable", help="Jinja variables (name=value)")
-    
-    main_parser = argparse.ArgumentParser(
-        description="Run Ninja from a pipeline description",
-        usage=jinja_parser.format_usage().strip()+" [-- ninja-option [ninja-option ...]]")
-    main_parser.add_argument("pipeline", help="Path to pipeline description")
-    main_parser.add_argument(
-        "variables", nargs="*", 
-        metavar="variable", help="Jinja variables (name=value)")
-    main_parser.add_argument(
-        "--modules-path", "-m", action="append", default=[],
-        help="Additional search path for modules")
-    main_parser.add_argument(
-        "--verbosity", "-v", 
-        choices=["warning", "info", "debug"], default="warning")
-    
-    if "--" in sys.argv:
-        limit = sys.argv.index("--")
-        arguments = main_parser.parse_args(sys.argv[1:limit])
-        raw_ninja_arguments = sys.argv[1+limit:]
-    else:
-        arguments = main_parser.parse_args()
-        raw_ninja_arguments = []
-    
-    try:
-        jinja_arguments = {
-            x.split("=", 1)[0]: x.split("=", 1)[1] 
-            for x in arguments.variables}
-    except Exception as e:
-        main_parser.error(e)
-    
-    verbosity = arguments.__dict__.pop("verbosity")
-    logging.basicConfig(
-        level=verbosity.upper(), 
-        format="%(levelname)s - %(name)s: %(message)s")
-    
-    ninja_parser = argparse.ArgumentParser()
-    ninja_parser.add_argument("--directory", "-C", default=os.getcwd())
-    known_ninja_arguments, _ = ninja_parser.parse_known_args(raw_ninja_arguments)
-    if known_ninja_arguments.directory:
-        # Make sure it ends with a "/"
-        known_ninja_arguments.directory = os.path.join(
-            known_ninja_arguments.directory, "")
-    
-    return arguments, jinja_arguments, raw_ninja_arguments, known_ninja_arguments
+################################################################################
+# Prune the task graph from tasks having None in their file_dep                #
+################################################################################
 
-def get_jinja_environment(arguments, known_ninja_arguments): 
-    """ Return a Jinja environment which:
-        * can load templates from (in order of priority) user-defined search 
-          paths, absolute paths, the directory of the pipeline description and 
-          the directory of this script
-        * contains a `glob` function mapping to `glob.glob`
-        * has filters to transform to JSON and YAML
-    """
+def prune():
+    task_list = []
+    spire_task_dict = {}
     
-    loader = jinja2.FileSystemLoader(arguments.modules_path + [
-        "/",
-        os.path.abspath(os.path.dirname(arguments.pipeline)),
-        os.getcwd(),
-        pkg_resources.resource_filename(
-            pkg_resources.Requirement.parse("spire-pipeline"), 
-            os.path.join(__name__, "modules"))
-    ])
-       
-    environment = jinja2.Environment(loader=loader, keep_trailing_newline=True)
-    environment.globals.update(
-        basename=os.path.basename,
-        build_directory=known_ninja_arguments.directory,
-        dirname=os.path.dirname,
-        glob=lambda pathname: sorted(
-            x if os.path.isabs(pathname) 
-            else os.path.relpath(x, known_ninja_arguments.directory) 
-            for x in glob.glob(
-                os.path.join(known_ninja_arguments.directory, pathname))),
-        load_csv=load_csv, load_json=load_json, load_yaml=load_yaml,
-        pipeline_directory=os.path.abspath(os.path.dirname(arguments.pipeline)),
-    )
-    environment.filters["json"] = lambda x: json.dumps(x)
-    environment.filters["yaml"] = lambda x: yaml.dump(x, default_flow_style=False)
+    # Look at creators in the caller's globals 
+    caller = inspect.getouterframes(inspect.currentframe())[1][0]
     
-    return environment
+    # https://github.com/pydoit/doit/blob/0.31.1/doit/loader.py#L129-L133
+    creators = doit.loader._get_task_creators(caller.f_globals, [])
+    creators.sort(key=lambda obj: obj[2])
+    creators.extend(
+        [(None, x.as_task_dict, None) for x in TaskFactory._task_registry])
+    
+    graph = TaskGraph()
+    graph.build(creators)
+    
+    to_skip = []
+    for (doit_task, spire_task) in graph.tasks.values():
+        if "" in doit_task.file_dep:
+            to_skip.append(doit_task.name)
+    
+    # Breadth-first traversal of the dependency tree, marking request tasks and
+    # their descendents as skipped
+    while len(to_skip) > 0:
+        root = to_skip.pop()
+        doit_task, spire_task = graph.tasks[root]
+        if not getattr(spire_task, "skipped", False):
+            logging.warning("Skipping {}".format(root))
+            spire_task.skipped = True
+            to_skip.extend(graph.children.get(root, []))
 
-def load_csv(path, *args, **kwargs):
-    """ Load data from a CSV file. Extra arguments are passed to the CSV 
-        reader (e.g. dialect).
-    """
+################################################################################
+# Representation of the task graph in the Graphviz format                      #
+################################################################################
 
-    if not os.path.isfile(path):
-        raise Exception("No such file: \"{}\"".format(path))
+def graph(tasks_only=False):
+    task_list = []
+    spire_task_dict = {}
     
-    with open(path) as fd:
-        reader = csv.DictReader(fd, *args, **kwargs)
-        data = list(reader)
+    # Look at creators in the caller's globals 
+    caller = inspect.getouterframes(inspect.currentframe())[1][0]
     
-    return data
+    # https://github.com/pydoit/doit/blob/0.31.1/doit/loader.py#L129-L133
+    creators = doit.loader._get_task_creators(caller.f_globals, [])
+    creators.sort(key=lambda obj: obj[2])
+    creators.extend(
+        [(None, x.as_task_dict, None) for x in TaskFactory._task_registry])
+    
+    graph = TaskGraph()
+    graph.build(creators)
+    
+    def quote(name):
+        return "\"{}\"".format(name.replace("\"", "\\\""))
+    
+    lines = ["digraph {"]
+    
+    deps_and_targets = set()
+    for name, (doit_task, _) in graph.tasks.items():
+        lines.append("    {}[shape=box];".format(quote(name)))
+        if not tasks_only:
+            for entry in itertools.chain(doit_task.file_dep, doit_task.targets):
+                if entry not in deps_and_targets:
+                    deps_and_targets.add(entry)
+                    lines.append(
+                        "    {}[shape=parallelogram];".format(quote(entry)))
+        
+            # We can create the edges now: the task, deps and targets node are
+            # already present
+            for entry in doit_task.file_dep:
+                lines.append("    {} -> {};".format(quote(entry), quote(name)))
+            for entry in doit_task.targets:
+                lines.append("    {} -> {};".format(quote(name), quote(entry)))
+    
+    if tasks_only:
+        # We need to wait for all task nodes to be created
+        for name, children in graph.children.items():
+            lines.extend(
+                "    {} -> {};".format(quote(name), quote(x)) 
+                for x in children)
+            
 
-def load_json(path, *args, **kwargs):
-    """ Load data from a JSON file. Extra arguments are passed to the JSON 
-        loader.
-    """
+    lines.extend(["}", ""])
     
-    if not os.path.isfile(path):
-        raise Exception("No such file: \"{}\"".format(path))
-    
-    with open(path) as fd:
-        data = json.load(fd)
-    
-    return data
-
-def load_yaml(path, *args, **kwargs):
-    """ Load data from a JSON file. Extra arguments are passed to the JSON 
-        loader.
-    """
-    
-    if not os.path.isfile(path):
-        raise Exception("No such file: \"{}\"".format(path))
-    
-    with open(path) as fd:
-        data = yaml.load(fd)
-    
-    return data
+    return "\n".join(lines)
