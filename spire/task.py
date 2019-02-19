@@ -1,3 +1,5 @@
+from . import misc
+
 class TaskMeta(type):
     def __new__(class_, name, bases, dict_):
         if bases[0] is not TaskBase:
@@ -31,6 +33,10 @@ TaskBase = type.__new__(TaskMeta, "TaskBase", (), {})
 class Task(TaskBase): 
     clean = True
 
+    @misc.classproperty
+    def uptodate(cls):
+        return misc.uptodate(cls)
+
     @classmethod
     def create_doit_tasks(class_):
         if class_ is Task:
@@ -39,5 +45,5 @@ class Task(TaskBase):
         if getattr(class_, "skipped", False):
             return None
         else:
-            fields = ["basename", "file_dep", "targets", "actions", "clean"]
+            fields = ["basename", "file_dep", "targets", "actions", "clean", "uptodate"]
             return {x: getattr(class_, x) for x in fields}
