@@ -1,3 +1,5 @@
+from . import misc
+
 class TaskFactory(object):
     """ Base class for task factory objects. Derived classes must follow this
         example:
@@ -29,7 +31,7 @@ class TaskFactory(object):
         if getattr(self, "skipped", False):
             return None
         else:
-            fields = ["basename", "file_dep", "targets", "actions", "clean"]
+            fields = ["basename", "file_dep", "targets", "actions", "clean", "uptodate"]
             return {x: getattr(self, x) for x in fields}
     
     @property
@@ -40,3 +42,5 @@ class TaskFactory(object):
             raise Exception(
                 "Ambiguous call to \"target\" ({} target{})".format(
                     len(self.targets), "" if len(self.targets)==0 else "s"))
+    
+    uptodate = property(misc.uptodate)

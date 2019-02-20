@@ -10,12 +10,12 @@ from test_base import TestBase
 pipeline = """
 import spire
 
-class CLIAction(spire.Task):
+class Task(spire.Task):
     file_dep = ["dependency"]
     targets = ["target.cli", "target.py"]
     
     def python_action(*args, **kwargs):
-        with open(CLIAction.targets[1], "w") as fd:
+        with open(Task.targets[1], "w") as fd:
             pass
     
     actions = [
@@ -24,7 +24,7 @@ class CLIAction(spire.Task):
     ]
 """
 
-class TestCLIModification(TestBase):
+class TestTaskModification(TestBase):
     
     file_dep = ["dependency"]
     targets = ["target.cli", "target.py"]
@@ -33,17 +33,11 @@ class TestCLIModification(TestBase):
         with open(os.path.join(self.directory, "pipeline.py"), "w") as fd:
             fd.write(pipeline)
         
-        subprocess.check_output([
-            "doit", "run", "-f", os.path.join(self.directory, "pipeline.py"), 
-            "-d", self.directory])
-        stats_1 = [os.stat(os.path.join(self.directory, x)) for x in self.targets]
+        stats_1 = self._run_and_stat()
         
         time.sleep(1)
         
-        subprocess.check_output([
-            "doit", "run", "-f", os.path.join(self.directory, "pipeline.py"), 
-            "-d", self.directory])
-        stats_2 = [os.stat(os.path.join(self.directory, x)) for x in self.targets]
+        stats_2 = self._run_and_stat()
         
         for stat_1, stat_2 in zip(stats_1, stats_2):
             for name in ["st_atime", "st_mtime", "st_ctime"]:
@@ -53,10 +47,7 @@ class TestCLIModification(TestBase):
         with open(os.path.join(self.directory, "pipeline.py"), "w") as fd:
             fd.write(pipeline)
         
-        subprocess.check_output([
-            "doit", "run", "-f", os.path.join(self.directory, "pipeline.py"), 
-            "-d", self.directory])
-        stats_1 = [os.stat(os.path.join(self.directory, x)) for x in self.targets]
+        stats_1 = self._run_and_stat()
         
         time.sleep(1)
         
@@ -68,10 +59,7 @@ class TestCLIModification(TestBase):
         with open(os.path.join(self.directory, "pipeline.py"), "w") as fd:
             fd.write(data)
         
-        subprocess.check_output([
-            "doit", "run", "-f", os.path.join(self.directory, "pipeline.py"), 
-            "-d", self.directory])
-        stats_2 = [os.stat(os.path.join(self.directory, x)) for x in self.targets]
+        stats_2 = self._run_and_stat()
         
         for stat_1, stat_2 in zip(stats_1, stats_2):
             self.assertNotEqual(stat_1.st_mtime, stat_2.st_mtime)
@@ -80,10 +68,7 @@ class TestCLIModification(TestBase):
         with open(os.path.join(self.directory, "pipeline.py"), "w") as fd:
             fd.write(pipeline)
         
-        subprocess.check_output([
-            "doit", "run", "-f", os.path.join(self.directory, "pipeline.py"), 
-            "-d", self.directory])
-        stats_1 = [os.stat(os.path.join(self.directory, x)) for x in self.targets]
+        stats_1 = self._run_and_stat()
         
         time.sleep(1)
         
@@ -95,13 +80,16 @@ class TestCLIModification(TestBase):
         with open(os.path.join(self.directory, "pipeline.py"), "w") as fd:
             fd.write(data)
         
-        subprocess.check_output([
-            "doit", "run", "-f", os.path.join(self.directory, "pipeline.py"), 
-            "-d", self.directory])
-        stats_2 = [os.stat(os.path.join(self.directory, x)) for x in self.targets]
+        stats_2 = self._run_and_stat()
         
         for stat_1, stat_2 in zip(stats_1, stats_2):
             self.assertNotEqual(stat_1.st_mtime, stat_2.st_mtime)
-        
+    
+    def _run_and_stat(self):
+        subprocess.check_output([
+            "doit", "run", "-f", os.path.join(self.directory, "pipeline.py"), 
+            "-d", self.directory])
+        return [os.stat(os.path.join(self.directory, x)) for x in self.targets]
+    
 if __name__ == "__main__":
     sys.exit(unittest.main())

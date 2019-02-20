@@ -5,6 +5,8 @@ Spire is a thin wrapper around [doit](http://pydoit.org/). It eases the declarat
 - Built-in factories for repetitive tasks
 - Optional pruning of the task graph when some dependencies are missing
 
+Moreover, tasks will be rerun whenever their actions are modified.
+
 ## Task declaration
 
 Spire tasks can be classes: this syntax facilitates the reusability of dependencies and targets in the list of actions. 
