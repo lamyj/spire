@@ -3,6 +3,8 @@ import tempfile
 
 from .task_factory import TaskFactory
 
+runner = []
+
 class Registration(TaskFactory):
     """ Register two images using ANTs. fixed and moving describe the respective
         images, and may include an optional volume to use in case of 4D images:
@@ -29,7 +31,7 @@ class Registration(TaskFactory):
                 
                 volumes.append(temp)
                 extractions.append(
-                    ["ImageMath", "4", temp, "ExtractSlice", path, str(index)])
+                    runner+["ImageMath", "4", temp, "ExtractSlice", path, str(index)])
                 removals.append(["rm", temp])
             else:
                 self.file_dep.append(data)
@@ -37,7 +39,7 @@ class Registration(TaskFactory):
         fixed_volume, moving_volume = volumes
         
         # Prepare the registration command
-        registration = [
+        registration = runner+[
             "antsRegistration",
             "--dimensionality", "3", "--float", "0",
             "--interpolation", "Linear", 
@@ -130,7 +132,7 @@ class ApplyTransforms(TaskFactory):
             fd, reference_volume = tempfile.mkstemp(suffix=".nii.gz")
             os.close(fd)
             
-            extraction.append([
+            extraction.append(runner+[
                 "ImageMath", "4", reference_volume, 
                 "ExtractSlice", reference_path, str(index)])
             removal.append(["rm", reference_volume])
@@ -146,7 +148,7 @@ class ApplyTransforms(TaskFactory):
                 self.file_dep.append(transform)
         
         self.targets = [output]
-        apply_transforms = [
+        apply_transforms = runner+[
             "antsApplyTransforms",
             "-i", input, "-r", reference_volume, "-o", output, 
             "-n", interpolation, "-e", input_image_type]
