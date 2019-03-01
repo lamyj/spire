@@ -11,6 +11,9 @@ class Registration(TaskFactory):
         passing (foo.nii.gz,0) will use the first 3D volume of the 4D foo.nii.gz
         for the registration. transform must be one of "rigid", "affine" or 
         "syn".
+        
+        This task stores the transforms in a specific member, in the order they
+        should be passed to ApplyTransforms.
     """
     def __init__(self, fixed, moving, transform, prefix, save_warped=True):
         TaskFactory.__init__(self, prefix)
@@ -60,25 +63,33 @@ class Registration(TaskFactory):
         else:
             registration += ["--output", prefix]
         
-        # Update the command with the transforms
+        # Update the command with the transforms. WARNING: antsApplyTransforms
+        # uses a transform _stack_.
         self.transforms = []
         if transform.lower() in ["rigid", "affine", "syn"]:
             registration += self.rigid_stage(fixed_volume, moving_volume)
-            self.transforms.append("{}{}".format(prefix, "0GenericAffine.mat"))
+            self.transforms.insert(0, "{}{}".format(prefix, "0GenericAffine.mat"))
         if transform.lower() in ["affine", "syn"]:
             registration += self.affine_stage(fixed_volume, moving_volume)
         if transform.lower() == "syn":
             registration += self.syn_stage(fixed_volume, moving_volume)
-            self.transforms.extend([
-                "{}{}".format(prefix, suffix) 
-                for suffix in ["1Warp.nii.gz", "1InverseWarp.nii.gz"]])
+            self.transforms.insert(0, "{}{}".format(prefix, "1Warp.nii.gz"))
         
         # self.file_dep is already OK
-        self.targets = self.transforms + output_images
+        self.targets = (
+            self.transforms 
+            + (
+                ["{}{}".format(prefix, "1InverseWarp.nii.gz")] 
+                if transform.lower() == "syn" else [])
+            + output_images)
         self.actions = extractions + [registration] + removals
         
     @property
     def inverse_transforms(self):
+        """ The list of transforms from fixed to moving, in the order they 
+            should be passed to ApplyTransforms.
+        """
+        
         result = []
         for transform in self.transforms[::-1]:
             if transform.endswith("0GenericAffine.mat"):
