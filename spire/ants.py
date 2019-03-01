@@ -15,8 +15,11 @@ class Registration(TaskFactory):
         This task stores the transforms in a specific member, in the order they
         should be passed to ApplyTransforms.
     """
-    def __init__(self, fixed, moving, transform, prefix, save_warped=True):
+    def __init__(
+            self, fixed, moving, transform, prefix, 
+            save_warped=True, quick=False):
         TaskFactory.__init__(self, prefix)
+        self.quick = quick
         
         # Prepare the volume extraction if necessary
         self.file_dep = []
@@ -103,7 +106,8 @@ class Registration(TaskFactory):
             "--initial-moving-transform", "[{},{},1]".format(fixed, moving),
             "--transform", "Rigid[0.1]",
             "--metric", "MI[{},{},1,32,Regular,0.25]".format(fixed, moving),
-            "--convergence", "[1000x500x250x100,1e-6,10]",
+            "--convergence", "[1000x500x250x{},1e-6,10]".format(
+                0 if self.quick else 100),
             "--shrink-factors", "8x4x2x1",
             "--smoothing-sigmas", "3x2x1x0vox",
         ]
@@ -112,7 +116,8 @@ class Registration(TaskFactory):
         return [
             "--transform", "Affine[0.1]",
             "--metric", "MI[{},{},1,32,Regular,0.25]".format(fixed, moving),
-            "--convergence", "[1000x500x250x100,1e-6,10]",
+            "--convergence", "[1000x500x250x{},1e-6,10]".format(
+                0 if self.quick else 100),
             "--shrink-factors", "8x4x2x1",
             "--smoothing-sigmas", "3x2x1x0vox",
         ]
@@ -121,7 +126,8 @@ class Registration(TaskFactory):
         return [
             "--transform", "SyN[0.1,3,0]",
             "--metric", "CC[{},{},1,4]".format(fixed, moving),
-            "--convergence", "[100x70x50x20,1e-6,10]",
+            "--convergence", "[100x70x50x{},1e-6,10]".format(
+                0 if self.quick else 20),
             "--shrink-factors", "8x4x2x1",
             "--smoothing-sigmas", "3x2x1x0vox",
         ]
