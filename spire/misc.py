@@ -6,7 +6,7 @@ import doit.action
 def _command_digest(action):
     hash = hashlib.sha1()
     for item in action.action:
-        hash.update(item.encode())
+        hash.update(str(item).encode())
     return hash.hexdigest()
 
 def _python_digest(action):
