@@ -40,6 +40,6 @@ setup(
     
     keywords="pipeline, workflow, task execution",
 
-    packages=find_packages(exclude=["doc", "modules", "tests"]),
+    packages=find_packages(exclude=["tests"]),
     install_requires=["doit"],
 )
