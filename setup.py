@@ -22,8 +22,8 @@ setup(
     
     license="MIT",
     
-        classifiers=[
-        "Development Status :: 5 - Stable",
+    classifiers=[
+        "Development Status :: 5 - Production/Stable",
         
         "Environment :: Console",
         
