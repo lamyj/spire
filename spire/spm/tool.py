@@ -1,5 +1,7 @@
 import numpy
 
+from . import matlab
+
 class Tool(object):
     """ Base class for SPM tools.
     """
@@ -39,57 +41,6 @@ class Tool(object):
         return self._get_script()
     
     @classmethod
-    def _to_matlab(self, obj):
-        """ Convert a Python object to a string which can be parsed by Matlab.
-            The following types are supported :
-            
-              * numpy.ndarray of dimensions 1 and 2 : converted to a matrix
-              * list : converted to a cell array
-              * string and scalar types : converted to litterals
-              
-            For nested structures (arrays and lists), the elements are 
-            recursively converted.
-        """
-        
-        result = ""
-        if isinstance(obj, numpy.ndarray):
-            
-            normalized = obj
-            if normalized.ndim == 1:
-                normalized = normalized.reshape((1, normalized.shape[0]))
-            
-            if normalized.dtype == numpy.object:
-                result += "{ "
-            else :
-                result += "[ "
-            
-            if normalized.shape[0] > 1:
-                result += "\n"
-            
-            for row in normalized :
-                result += " ".join(Tool._to_matlab(x) for x in row)
-                if normalized.shape[0] > 1:
-                    result += "\n";
-            
-            if normalized.dtype == numpy.object:
-                result += " }"
-            else :
-                result += " ]"
-        elif isinstance(obj, list):
-            result = "{{ {} }}".format(
-                " ".join(Tool._to_matlab(x) for x in obj))
-        elif isinstance(obj, str):
-            result = "'{}'".format(obj)
-        elif numpy.isscalar(obj):
-            result = "{}".format(obj)
-        else :
-            raise Exception(
-                "Cannot convert an object of type {}".format(
-                    repr(type(obj).__name__)))
-    
-        return result
-    
-    @classmethod
     def _generate_script(self, prefix, obj):
         """ Recursively generate a Matlab script from a nested dictionary of
             configuration parameters.
@@ -104,6 +55,6 @@ class Tool(object):
                 script.extend(sub_script)
             else:
                 script.append("{}.{} = {}".format(
-                    prefix, key, Tool._to_matlab(value)))
+                    prefix, key, matlab.to_matlab(value)))
         
         return script
