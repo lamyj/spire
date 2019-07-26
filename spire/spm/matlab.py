@@ -31,7 +31,13 @@ def to_matlab(obj, name=None):
             if normalized.ndim == 1:
                 normalized = normalized.reshape((1, normalized.shape[0]))
             
-            if normalized.dtype == numpy.object:
+            # Strings are stored as cells array
+            use_cell_array = (
+                normalized.dtype == numpy.object
+                or numpy.issubdtype(normalized.dtype, numpy.unicode_)
+                or numpy.issubdtype(normalized.dtype, numpy.string_))
+            
+            if use_cell_array:
                 result += "{ "
             else :
                 result += "[ "
@@ -44,7 +50,7 @@ def to_matlab(obj, name=None):
                 if normalized.shape[0] > 1:
                     result += "\n";
             
-            if normalized.dtype == numpy.object:
+            if use_cell_array:
                 result += " }"
             else :
                 result += " ]"

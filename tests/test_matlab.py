@@ -1,8 +1,6 @@
-import sys
 import unittest
 
 import numpy
-import spire
 import spire.spm
 
 class TestMATLAB(unittest.TestCase):
@@ -65,6 +63,15 @@ class TestMATLAB(unittest.TestCase):
             spire.spm.matlab.to_matlab([[123], [456]]), "[ \n123\n456\n ]")
         self.assertEqual(
             spire.spm.matlab.to_matlab([[1, 2], [3, 4]]), "[ \n1 2\n3 4\n ]")
+    
+    def test_convert_string_array(self):
+        self.assertEqual(
+            spire.spm.matlab.to_matlab(["abc", "def"]), "{ 'abc' 'def' }")
+        self.assertEqual(
+            spire.spm.matlab.to_matlab([["abc", "def"]]), "{ 'abc' 'def' }")
+        self.assertEqual(
+            spire.spm.matlab.to_matlab([["abc", "def"], ["ghi", "jkl"]]), 
+            "{ \n'abc' 'def'\n'ghi' 'jkl'\n }")
     
     def test_convert_heterogeneous_array(self):
         self.assertEqual(
