@@ -85,33 +85,38 @@ class TestMATLAB(unittest.TestCase):
             "{ \n1 'abc'\n'def' 4\n }")
     
     def test_convert_array_of_dicts(self):
+        # Empty
         self.assertEqual(
             spire.spm.matlab.to_matlab(
-                [{"foo": 123, "bar": "abc"}, {"foo": "def", "bar": 456}], 
-                "array"),
-            "array(1).foo = 123;\narray(1).bar = 'abc';\n"
-            "array(2).foo = 'def';\narray(2).bar = 456;")
+                numpy.empty((), [("foo", object), ("bar", object)])),
+            "struct('foo', {  }, 'bar', {  })")
+            
+        # Homogeneous fields
         self.assertEqual(
             spire.spm.matlab.to_matlab(
-                [[{"foo": 123, "bar": "abc"}, {"foo": "def", "bar": 456}]], 
-                "array"),
-            "array(1, 1).foo = 123;\narray(1, 1).bar = 'abc';\n"
-            "array(1, 2).foo = 'def';\narray(1, 2).bar = 456;")
+                [{"foo": 123, "bar": "abc"}, {"foo": 456, "bar": "def"}]),
+            "struct('foo', { 123 456 }, 'bar', { 'abc' 'def' })")
+        
+        # Heterogeneous fields
         self.assertEqual(
             spire.spm.matlab.to_matlab(
-                [[{"foo": 123, "bar": "abc"}], [{"foo": "def", "bar": 456}]], 
-                "array"),
-            "array(1, 1).foo = 123;\narray(1, 1).bar = 'abc';\n"
-            "array(2, 1).foo = 'def';\narray(2, 1).bar = 456;")
+                [{"foo": 123, "bar": "abc"}, {"foo": "def", "bar": 456}]),
+            "struct('foo', { 123 'def' }, 'bar', { 'abc' 456 })")
+        self.assertEqual(
+            spire.spm.matlab.to_matlab(
+                [[{"foo": 123, "bar": "abc"}, {"foo": "def", "bar": 456}]]),
+            "struct('foo', { 123 'def' }, 'bar', { 'abc' 456 })")
+        self.assertEqual(
+            spire.spm.matlab.to_matlab(
+                [[{"foo": 123, "bar": "abc"}], [{"foo": "def", "bar": 456}]]),
+            "struct('foo', { \n123\n'def'\n }, 'bar', { \n'abc'\n456\n })")
         self.assertEqual(
             spire.spm.matlab.to_matlab(
                 [[{"foo": 123, "bar": "abc"}, {"foo": "abc", "bar": 123}],
-                    [{"foo": 456, "bar": "def"}, {"foo": "def", "bar": 456}]], 
-                "array"),
-            "array(1, 1).foo = 123;\narray(1, 1).bar = 'abc';\n"
-            "array(1, 2).foo = 'abc';\narray(1, 2).bar = 123;\n"
-            "array(2, 1).foo = 456;\narray(2, 1).bar = 'def';\n"
-            "array(2, 2).foo = 'def';\narray(2, 2).bar = 456;")
+                    [{"foo": 456, "bar": "def"}, {"foo": "def", "bar": 456}]]),
+            "struct("
+                "'foo', { \n123 'abc'\n456 'def'\n }, "
+                "'bar', { \n'abc' 123\n'def' 456\n })")
     
 if __name__ == "__main__":
     unittest.main()

@@ -1,15 +1,13 @@
 import numpy
 
-def to_matlab(obj, name=None):
+def to_matlab(obj):
     """ Convert a Python object to a string which can be parsed by Matlab.
         The following types are supported :
         
-          * numpy.ndarray of dimensions 1 and 2 : converted to a matrix
-          * list : converted to a cell array
-          * string and scalar types : converted to litterals
-          
-        For nested structures (arrays and lists), the elements are 
-        recursively converted.
+        - numpy.ndarray: converted to a matrix
+        - list of dictionaries with homogenenous keys: converted to a struct array
+        - other lists: converted to a cell array
+        - string and scalar types: converted to litterals
     """
     
     obj = normalize(obj)
@@ -17,15 +15,11 @@ def to_matlab(obj, name=None):
     result = ""
     if isinstance(obj, numpy.ndarray):
         if obj.dtype.fields:
-            result = []
-            for index, item in zip(numpy.ndindex(*obj.shape), numpy.nditer(obj, ["refs_ok"])):
-                for field in obj.dtype.fields:
-                    result.append("{}({}).{} = {};".format(
-                        name, 
-                        ", ".join(str(1+x) for x in index), 
-                        field, to_matlab(item[field].item())
-                    ))
-            result = "\n".join(result)
+            cells = [to_matlab(obj[field]) for field in obj.dtype.fields]
+            pairs = [
+                "{}, {}".format(to_matlab(field), cell) 
+                for field, cell in zip(obj.dtype.fields, cells)]
+            result = "struct({})".format(", ".join(pairs))
         else:
             normalized = obj
             if normalized.ndim == 1:
@@ -42,13 +36,14 @@ def to_matlab(obj, name=None):
             else :
                 result += "[ "
             
-            if normalized.shape[0] > 1:
-                result += "\n"
-            
-            for row in normalized :
-                result += " ".join(to_matlab(x) for x in row)
+            if normalized.shape:
                 if normalized.shape[0] > 1:
-                    result += "\n";
+                    result += "\n"
+                
+                for row in normalized :
+                    result += " ".join(to_matlab(x) for x in row)
+                    if normalized.shape[0] > 1:
+                        result += "\n";
             
             if use_cell_array:
                 result += " }"
