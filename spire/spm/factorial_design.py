@@ -1,323 +1,235 @@
-import numpy
+import textwrap
 
-from .tool import Tool
+from .spm_object import SPMObject
 
-class FactorialDesign(Tool):
-    """ Factorial design specification
-    
-        cf. https://github.com/spm/spm12/blob/master/config/spm_cfg_factorial_design.m
-    """
-    
-    name = "stats.factorial_design"
-    
-    class OneSampleTTest(Tool.Config):
-        """ One-sample t-test, containing:
-            - the scans
-        """
+class Masking(SPMObject):
+    def __init__(self, 
+            threshold_mode=None, threshold=None, implicit=True, explicit=""):
         
-        name = "t1"
+        super().__init__("spm.stats.factorial_design.masking")
+        if threshold_mode not in [None, "absolute", "relative"]:
+            raise Exception("Invalid threshold mode: {}".format(threshold_mode))
+        self.threshold_mode = threshold_mode
         
-        def __init__(self, scans=None):
-            self.scans = scans or []
+        if threshold_mode == "absolute" and threshold is None:
+            self.threshold = 100
+        elif threshold_mode == "relative" and threshold is None:
+            self.threshold = 0.8
+        else:
+            self.threshold = threshold
         
-        def _get_parameters(self):
-            result = {"scans": self.scans}
-            return result
-    
-    class TwoSampleTTest(Tool.Config):
-        """ Two-sample t-test, containing:
-            - The scans forming the two groups,
-            - The independance between measurements
-            - The equality of variance between measurements
-            - The grand mean scaling
-            - The ANCOVA-by-factor regressors
-        """
+        self.implicit = implicit
+        self.explicit = explicit
         
-        name = "t2"
-        
-        def __init__(
-                self, scans1=None, scans2=None, independance=True,
-                variance_equality=False, grand_mean_scaling=False,
-                ancova=False):
-            self.scans1 = scans1 or []
-            self.scans2 = scans2 or []
-            self.independance = independance
-            self.variance_equality = variance_equality
-            self.grand_mean_scaling = grand_mean_scaling
-            self.ancova = ancova
-        
-        def _get_parameters(self):
-            result = {
-                "scans1": self.scans1,
-                "scans2": self.scans2,
-                "dept": int(not self.independance),
-                "variance": int(not self.variance_equality),
-                "gmsca": int(self.grand_mean_scaling),
-                "ancova": int(self.ancova)
-            }
-            return result
-    
-    class PairedTTest(Tool.Config):
-        """ Two-sample t-test, containing:
-            - The pairs of scans,
-            - The grand mean scaling
-            - The ANCOVA-by-factor regressors
-        """
-        
-        name = "pt"
-        
-        def __init__(
-                self, pairs=None, grand_mean_scaling=False,
-                ancova=False):
-            self.pairs = pairs or []
-            self.grand_mean_scaling = grand_mean_scaling
-            self.ancova = ancova
-        
-        def _get_parameters(self):
-            result = {
-                "pair": [{"scans": pair} for pair in self.pairs],
-                "gmsca": int(self.grand_mean_scaling),
-                "ancova": int(self.ancova)
-            }
-            return result
-    
-#    class MultipleRegression(Tool.Config):
-#        pass
-#    
-#    class OneWayANOVA(Tool.Config):
-#        pass
-#    
-#    class OneWayANOVAWithinSubject(Tool.Config):
-#        pass
-#    
+        self.template = self.environment.from_string(textwrap.dedent("""\
+            {%- if threshold_mode == none -%}
+            {{ id(index, name) }}.tm.tm_none = 1;
+            {%- elif threshold_mode == "absolute" -%}
+            {{ id(index, name) }}.tma.athresh = {{ threshold }};
+            {%- elif threshold_mode == "relative" -%}
+            {{ id(index, name) }}.tmr.rthresh = {{ threshold }};
+            {%- endif %}
+            {{ id(index, name) }}.im = {{ implicit|int }};
+            {{ id(index, name) }}.em = {'{{ explicit}}'};"""))
 
-    class Factor(Tool.Config):
-        """ Factor of experimental design, containing:
-            
-            * The name of the factor
-            * The number of levels
-            * The independance between measurements
-            * The equality of variance between measurements
-            * The grand mean scaling
-            * The ANCOVA-by-factor regressors
-        """
+class GlobalCalculation(SPMObject):
+    def __init__(self, mode="omit", values=None):
+        super().__init__("spm.stats.factorial_design.globalc")
         
-        name = "fact"
+        if mode not in ["omit", "user", "mean"]:
+            raise Exception("Invalid mode: {}".format(mode))
+        self.mode = mode
         
-        def __init__(self, name, levels, independance=True,
-                     variance_equality=False, grand_mean_scaling=False,
-                     ancova=False):
-            self.name = name
-            self.levels = levels
-            self.independance = independance
-            self.variance_equality = variance_equality
-            self.grand_mean_scaling = grand_mean_scaling
-            self.ancova = ancova
+        self.values = values
         
-        def _get_parameters(self):
-            result = {
-                "name" : self.name,
-                "levels" : self.levels,
-                "dept" : int(not self.independance),
-                "variance" : int(not self.variance_equality),
-                "gmsca" : int(self.grand_mean_scaling),
-                "ancova" : int(self.ancova)
-            }
-            return result
-    
-    class Cell(Tool.Config):
-        """ Group a scans
-        """
-        
-        name = "icell"
-        
-        def __init__(self, levels, scans):
-            self.levels = levels
-            self.scans = scans
-        
-        def _get_parameters(self):
-            result = {
-                "levels" : numpy.asarray(self.levels, int),
-                "scans" : self.scans, 
-            }
-            return result
+        self.template = self.environment.from_string(textwrap.dedent("""\
+            {%- if mode == "omit" -%}
+            {{ id(index, name) }}.g_omit = 1;
+            {%- elif mode == "user" -%}
+            {{ id(index, name) }}.g_user.global_uval = [{{ values|join(";") }}];
+            {%- elif mode == "mean" -%}
+            {{ id(index, name) }}.g_mean = 1;
+            {%- endif -%}"""))
 
-    class FullFactorial(Tool.Config):
-        name = "fd"
+class GlobalNormalization(SPMObject):
+    def __init__(self, value=None, mode=None):
+        super().__init__("spm.stats.factorial_design.globalm")
         
-        def __init__(self, factors, cells):
-            self.factors = factors
-            self.cells = cells
+        self.value = value
         
-        def _get_parameters(self):
-            result = { 
-                FactorialDesign.Factor.name: [x.parameters for x in self.factors],
-                FactorialDesign.Cell.name: [x.parameters for x in self.cells]
-            }
-            return result
-#    
-#    class FlexibleFactorial(Tool.Config):
-#        pass
-    
-    class Covariate(Tool.Config):
-        """ Covariate/nuisance variable, containing :
+        if mode not in [None, "proportional", "ancova"]:
+            raise Exception("Invalid mode: {}".format(mode))
+        self.mode = {None: 1, "proportional": 2, "ancova": 3}[mode]
         
-            * The name of the covariate
-            * A vector of values
-            * The eventual interaction between the covariate and a chosen
-              experimental factor
-            * The centering method
-        """
+        self.template = self.environment.from_string(textwrap.dedent("""\
+            {%- if value == none -%}
+            {{ id(index, name) }}.gmsca.gmsca_no = 1;
+            {%- else -%}
+            {{ id(index, name) }}.gmsca.gmsca_yes.gmscv = {{ value }};
+            {%- endif %}
+            {{ id(index, name) }}.glonorm = {{ mode }};"""))
+
+class Covariate(object):
+    def __init__(self, name, values, interactions=None, centering="Overall mean"):
+        self.name = name
+        self.values = values
         
-        Interaction = {
-            "None": 1, 
-            "With Factor 1": 2, "With Factor 2": 3, "With Factor 3": 4 }
+        if interactions not in [None, "With Factor 1", "With Factor 2", "With Factor 2"]:
+            raise Exception("Invalid interactions: {}".format(interactions))
+        self.interactions = interactions
         
-        Centering = {
-            "Overall mean": 1, 
-            "Factor 1 mean": 2, "Factor 2 mean": 3, "Factor 3 mean": 4, 
-            "No centering": 5, "User specified value": 6, 
-            "As implied by ANCOVA": 7, "GM": 8 }
+        if centering not in [
+                "Overall mean", 
+                "Factor 1 mean", "Factor 2 mean", "Factor 3 mean",
+                "No centering", "User specified value", "As implied by ANCOVA", 
+                "GM"]:
+            raise Exception("Invalid centering: {}".format(centering))
+        self.centering = centering
+
+class Covariates(SPMObject):
+    def __init__(self, covariates):
+        super().__init__("spm.stats.factorial_design.cov")
+        self.covariates = covariates
+        self.template = self.environment.from_string(textwrap.dedent("""\
+            {%- if covariates -%}
+            {% for covariate in covariates -%}
+            {{ id(index, name) }}({{ loop.index }}).c = [
+            {% for value in covariate.values -%}
+            {{ ((id(index, name)+"("+(loop.index|string)+").c = {")|length)*" " }}{{ value }}
+            {% endfor -%}
+            {{ ((id(index, name)+"("+(loop.index|string)+").c = {")|length)*" " }}];
+            {{ id(index, name) }}({{ loop.index }}).cname = '{{ name }}';
+            {{ id(index, name) }}({{ loop.index }}).iCFI = TODO;
+            {{ id(index, name) }}({{ loop.index }}).iCC = TODO;
+            {% endfor -%}
+            {%- else -%}
+            {{ id(index, name) }} = struct('c', {}, 'cname', {}, 'iCFI', {}, 'iCC', {});
+            {%- endif -%}
+            """))
+
+# Mutliple covariates
+
+class OneSampleTTest(SPMObject):
+    def __init__(self, scans):
+        super().__init__("spm.stats.factorial_design.des.t1")
+        self.scans = scans
+        self.template = self.environment.from_string(textwrap.dedent("""\
+            {{ id(index, name) }}.scans = {
+            {% for scan in scans -%}
+            {{ ((id(index, name)+".scans = {")|length)*" " }}'{{ scan }}'
+            {% endfor -%}
+            {{ ((id(index, name)+".scans = {")|length)*" " }}};
+            """))
+
+class TwoSamplesTTest(SPMObject):
+    def __init__(
+            self, scans1, scans2, 
+            independance=True, equal_variance=False, grand_mean_scaling=False,
+            ancova=False):
         
-        def __init__(self, name, values, interaction="None", centering="Overall mean"):
-            self.name = name
-            self.values = values
-            self.interaction = interaction
-            self.centering = centering 
+        super().__init__("spm.stats.factorial_design.des.t2")
+        self.scans1 = scans1
+        self.scans2 = scans2
+        self.independance = independance
+        self.equal_variance = equal_variance
+        self.grand_mean_scaling = grand_mean_scaling
+        self.ancova = ancova
         
-        def _get_parameters(self):
-            result = {
-                "cname" : self.name,
-                "c" : numpy.asarray(self.values),
-                "iCFI" : self.Interaction[self.interaction],
-                "iCC" : self.Centering[self.centering],
-            }
+        self.template = self.environment.from_string(textwrap.dedent("""\
+            {{ id(index, name) }}.scans1 = {
+            {% for scan in scans1 -%}
+            {{ ((id(index, name)+".scans1 = {")|length)*" " }}'{{ scan }}'
+            {% endfor -%}
+            {{ ((id(index, name)+".scans1 = {")|length)*" " }}};
+            {{ id(index, name) }}.scans2 = {
+            {% for scan in scans2 -%}
+            {{ ((id(index, name)+".scans1 = {")|length)*" " }}'{{ scan }}'
+            {% endfor -%}
+            {{ ((id(index, name)+".scans1 = {")|length)*" " }}};
+            {{ id(index, name) }}.dept = {{ (not independance)|int }};
+            {{ id(index, name) }}.variance = {{ (not equal_variance)|int }};
+            {{ id(index, name) }}.gmsca = {{ grand_mean_scaling|int }};
+            {{ id(index, name) }}.ancova = {{ ancova|int }};
+            """))
+
+class PairedTTest(SPMObject):
+    def __init__(self, pairs, grand_mean_scaling=False, ancova=False):
+        
+        super().__init__("spm.stats.factorial_design.des.pt")
+        self.pairs = pairs
+        self.grand_mean_scaling = grand_mean_scaling
+        self.ancova = ancova
+        
+        self.template = self.environment.from_string(textwrap.dedent("""\
+            {% for scan1, scan2 in pairs -%}
+            {{ id(index, name) }}.pair({{ loop.index }}) = {
+            {{ ((id(index, name)+".pair("+(loop.index|string)+") = {")|length)*" " }}'{{ scan1 }}'
+            {{ ((id(index, name)+".pair("+(loop.index|string)+") = {")|length)*" " }}'{{ scan2 }}'
+            {{ ((id(index, name)+".pair("+(loop.index|string)+") = {")|length)*" " }}};
+            {% endfor -%}
             
-            return result
-    
-    class Masking(Tool.Config):
-        """ Masking options, containing :
+            {{ id(index, name) }}.dept = {{ (not independance)|int }};
+            {{ id(index, name) }}.variance = {{ (not equal_variance)|int }};
+            {{ id(index, name) }}.gmsca = {{ grand_mean_scaling|int }};
+            {{ id(index, name) }}.ancova = {{ ancova|int }};
+            """))
+
+class ANOVA(SPMObject):
+    def __init__(
+            self, cells,
+            independance=True, equal_variance=False, grand_mean_scaling=False,
+            ancova=False):
         
-            * The type and eventual value of threshold masking
-            * The implicit mask value
-            * The explicit mask image
-        """
+        super().__init__("spm.stats.factorial_design.des.anova")
+        self.cells = cells
+        self.independance = independance
+        self.equal_variance = equal_variance
+        self.grand_mean_scaling = grand_mean_scaling
+        self.ancova = ancova
         
-        def __init__(self, threshold_masking=None, threshold_value=None, 
-                     implicit_mask=True, explicit_mask=None):
-            self.threshold_masking = threshold_masking
-            if threshold_masking == None :
-                self.threshold_value = 1
-            elif threshold_masking == "absolute" :
-                self.threshold_value = threshold_value
-            elif threshold_masking == "relative" :
-                self.threshold_value = threshold_value
-            self.implicit_mask = implicit_mask
-            self.explicit_mask = explicit_mask or ""
+        self.template = self.environment.from_string(textwrap.dedent("""\
+            {% for cell in cells -%}
+            {{ id(index, name) }}.icell({{ loop.index }}).scans = {
+            {% set padding=((id(index, name)+".icell("+(loop.index|string)+").scans = {")|length)*" " -%}
+            {% for scan in cell -%}
+            {{ padding }}'{{ scan }}'
+            {% endfor -%}
+            {{ padding }}};
+            {% endfor -%}
+            {{ id(index, name) }}.dept = {{ (not independance)|int }};
+            {{ id(index, name) }}.variance = {{ (not equal_variance)|int }};
+            {{ id(index, name) }}.gmsca = {{ grand_mean_scaling|int }};
+            {{ id(index, name) }}.ancova = {{ ancova|int }};
+            """))
+
+class FactorialDesign(SPMObject):
+    def __init__(
+            self, output_directory, design, covariates=None,
+            masking=None, global_calculation=None, global_normalization=None):
         
-        def _get_parameters(self):
-            result = {
-                "im" : int(self.implicit_mask),
-                "em" : [self.explicit_mask]
-            }
-            
-            if self.threshold_masking is None :
-                result["tm.tm_none"] = self.threshold_value
-            elif self.threshold_masking == "absolute" :
-                result["tma.athresh"] = self.threshold_value
-            elif self.threshold_masking == "relative" :
-                result["tmr.rthresh"] = self.threshold_value
-            
-            return result
-    
-    class GlobalCalculation(Tool.Config):
-        """ Estimation of the global effects, containing :
+        super().__init__("spm.stats.factorial_design")
         
-            * The estimation mode
-            * The eventual estimation value
-        """
-        
-        def __init__(self, mode=None, values=None):
-            self.mode = mode
-            self.values = values or []
-        
-        def _get_parameters(self):
-            result = {}
-            
-            if self.mode is None :
-                result["g_omit"] = 1
-            elif self.mode == "user" :
-                result["g_user.global_uval"] = numpy.asarray(self.values)
-            elif self.mode == "mean" :
-                result["g_mean"] = 1
-            
-            return result
-    
-    class GlobalNormalization(Tool.Config):
-        """ Global normalization options, containing :
-        
-            * The grand mean scaling value
-            * The normalization flag
-        """
-        
-        def __init__(self, grand_mean_scaled_value=None, normalization=None):
-            self.grand_mean_scaled_value = grand_mean_scaled_value
-            self.normalization = normalization
-        
-        def _get_parameters(self):
-            result = {}
-            
-            if self.grand_mean_scaled_value is None :
-                result["gmsca.gmsca_no"] = 1
-            else :
-                result["gmsca.gmsca_yes.gmscv"] = self.grand_mean_scaled_value
-            
-            if self.normalization is None :
-                result["glonorm"] = 1
-            elif self.normalization == "proportional" :
-                result["glonorm"] = 2
-            elif self.normalization == "ancova" :
-                result["glonorm"] = 3
-            
-            return result
-    
-    def __init__(self, root, output_directory, design, covariates=None, 
-                 masking=None, global_calculation=None, global_normalization=False) :
-        Tool.__init__(self, root)
         self.output_directory = output_directory
         self.design = design
-        self.covariates = covariates or []
-        self.masking = masking or FactorialDesign.Masking()
-        self.global_calculation = global_calculation or FactorialDesign.GlobalCalculation()
-        self.global_normalization = global_normalization or FactorialDesign.GlobalNormalization()
+        self.covariates = covariates or Covariates([])
+        self.masking = masking or Masking()
+        self.global_calculation = global_calculation or GlobalCalculation()
+        self.global_normalization = global_normalization or GlobalNormalization()
     
-    def _get_script(self):
-        script = []
-        
-        script.extend(Tool._generate_script(
-            self.name, {"dir" : [self.output_directory]}))
-        script.extend(Tool._generate_script(
-            "{}.des.{}".format(self.name, self.design.name), 
-            self.design.parameters))
-        
-        if self.covariates :
-            covariates = [x.parameters for x in self.covariates]
-        else :
-            covariates = numpy.empty(
-                (), [(x, object) for x in ["c", "cname", "iCFI", "iCC"]])
-        script.extend(Tool._generate_script(self.name, {"cov": covariates}))
-        
-        script.extend(Tool._generate_script(
-            self.name,
-            {"multi_cov": numpy.empty( 
-                (), [(x, object) for x in ["files", "iCFI", "iCC"]])}))
-        
-        script.extend(Tool._generate_script(
-            "{}.masking".format(self.name), self.masking.parameters))
-        script.extend(Tool._generate_script(
-            "{}.globalc".format(self.name), self.global_calculation.parameters))
-        script.extend(Tool._generate_script(
-            "{}.globalm".format(self.name), 
-            self.global_normalization.parameters))
-        
-        return script
+        self.template = self.environment.from_string(textwrap.dedent("""\
+            {{ id(index, name) }}.dir = {'{{ output_directory }}'};
+            {{ _design }}
+            {{ _covariates }}
+            {{ id(index, name) }}.multi_cov = struct('files', {}, 'iCFI', {}, 'iCC', {});
+            {{ _masking }}
+            {{ _global_calculation }}
+            {{ _global_normalization }}
+            """))
+    
+    def __call__(self, index):
+        self._design = self.design(index)
+        self._covariates = self.covariates(index)
+        self._masking = self.masking(index)
+        self._global_calculation = self.global_calculation(index)
+        self._global_normalization = self.global_normalization(index)
+        return super().__call__(index)

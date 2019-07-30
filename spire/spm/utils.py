@@ -1,3 +1,4 @@
+import os
 import subprocess
 import tempfile
 
@@ -47,9 +48,7 @@ def script(tools, standalone=True, exit=True, modality="fmri"):
         ])
     
     for index, tool in enumerate(tools):
-        prefix = "matlabbatch{{{}}}.spm".format(index+1)
-        script.extend([
-            "{}.{};".format(prefix, statement) for statement in tool.script])
+        script.append(tool(1+index))
     
     if standalone:
         script.append("spm_jobman('run',matlabbatch);")
@@ -64,7 +63,7 @@ def run(jobs, matlab="matlab"):
     """
     
     fd, path = tempfile.mkstemp(suffix=".m")
-    os.write(fd, script(jobs))
+    os.write(fd, script(jobs).encode())
     os.close(fd)
 
     try:

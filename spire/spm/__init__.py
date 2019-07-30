@@ -1,4 +1,3 @@
-from .factorial_design import FactorialDesign
-from . import matlab
-from .tool import Tool
+from . import factorial_design
+from .spm_object import SPMObject
 from .utils import *
