@@ -1,3 +1,4 @@
+import pathlib
 import textwrap
 
 from .spm_object import SPMObject
@@ -225,6 +226,10 @@ class FactorialDesign(SPMObject):
             {{ _global_calculation }}
             {{ _global_normalization }}
             """))
+    
+    @property
+    def spmmat(self):
+        return pathlib.Path(self.output_directory)/"SPM.mat"
     
     def __call__(self, index):
         self._design = self.design(index)
