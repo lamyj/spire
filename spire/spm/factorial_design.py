@@ -71,21 +71,24 @@ class GlobalNormalization(SPMObject):
             {{ id(index, name) }}.glonorm = {{ mode }};"""))
 
 class Covariate(object):
-    def __init__(self, name, values, interactions=None, centering="Overall mean"):
-        self.name = name
+    def __init__(self, cname, values, interactions=None, centering="Overall mean"):
+        self.cname = cname
         self.values = values
         
-        if interactions not in [None, "With Factor 1", "With Factor 2", "With Factor 2"]:
+        known_interactions = [None, "With Factor 1", "With Factor 2", "With Factor 3"]
+        if interactions not in known_interactions:
             raise Exception("Invalid interactions: {}".format(interactions))
-        self.interactions = interactions
+        self.interactions = 1+known_interactions.index(interactions)
         
-        if centering not in [
+        known_centering = [
                 "Overall mean", 
                 "Factor 1 mean", "Factor 2 mean", "Factor 3 mean",
                 "No centering", "User specified value", "As implied by ANCOVA", 
-                "GM"]:
+                "GM"]
+        
+        if centering not in known_centering:
             raise Exception("Invalid centering: {}".format(centering))
-        self.centering = centering
+        self.centering = 1+known_centering.index(centering)
 
 class Covariates(SPMObject):
     def __init__(self, covariates):
@@ -99,14 +102,13 @@ class Covariates(SPMObject):
             {{ ((id(index, name)+"("+(loop.index|string)+").c = {")|length)*" " }}{{ value }}
             {% endfor -%}
             {{ ((id(index, name)+"("+(loop.index|string)+").c = {")|length)*" " }}];
-            {{ id(index, name) }}({{ loop.index }}).cname = '{{ name }}';
-            {{ id(index, name) }}({{ loop.index }}).iCFI = TODO;
-            {{ id(index, name) }}({{ loop.index }}).iCC = TODO;
+            {{ id(index, name) }}({{ loop.index }}).cname = '{{ covariate.cname }}';
+            {{ id(index, name) }}({{ loop.index }}).iCFI = {{ covariate.interactions }};
+            {{ id(index, name) }}({{ loop.index }}).iCC = {{ covariate.centering }};
             {% endfor -%}
             {%- else -%}
             {{ id(index, name) }} = struct('c', {}, 'cname', {}, 'iCFI', {}, 'iCC', {});
-            {%- endif -%}
-            """))
+            {%- endif -%}"""))
 
 # Mutliple covariates
 
@@ -125,13 +127,13 @@ class OneSampleTTest(SPMObject):
 class TwoSamplesTTest(SPMObject):
     def __init__(
             self, scans1, scans2, 
-            independance=True, equal_variance=False, grand_mean_scaling=False,
+            independence=True, equal_variance=False, grand_mean_scaling=False,
             ancova=False):
         
         super().__init__("spm.stats.factorial_design.des.t2")
         self.scans1 = scans1
         self.scans2 = scans2
-        self.independance = independance
+        self.independence = independence
         self.equal_variance = equal_variance
         self.grand_mean_scaling = grand_mean_scaling
         self.ancova = ancova
@@ -147,7 +149,7 @@ class TwoSamplesTTest(SPMObject):
             {{ ((id(index, name)+".scans1 = {")|length)*" " }}'{{ scan }}'
             {% endfor -%}
             {{ ((id(index, name)+".scans1 = {")|length)*" " }}};
-            {{ id(index, name) }}.dept = {{ (not independance)|int }};
+            {{ id(index, name) }}.dept = {{ (not independence)|int }};
             {{ id(index, name) }}.variance = {{ (not equal_variance)|int }};
             {{ id(index, name) }}.gmsca = {{ grand_mean_scaling|int }};
             {{ id(index, name) }}.ancova = {{ ancova|int }};
@@ -169,8 +171,6 @@ class PairedTTest(SPMObject):
             {{ ((id(index, name)+".pair("+(loop.index|string)+") = {")|length)*" " }}};
             {% endfor -%}
             
-            {{ id(index, name) }}.dept = {{ (not independance)|int }};
-            {{ id(index, name) }}.variance = {{ (not equal_variance)|int }};
             {{ id(index, name) }}.gmsca = {{ grand_mean_scaling|int }};
             {{ id(index, name) }}.ancova = {{ ancova|int }};
             """))
