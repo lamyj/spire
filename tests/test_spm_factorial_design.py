@@ -2,7 +2,6 @@ import pathlib
 import textwrap
 import unittest
 
-import numpy
 import spire.spm
 
 class TestSPMFactorialDesign(unittest.TestCase):
