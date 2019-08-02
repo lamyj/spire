@@ -6,7 +6,7 @@ class SPMObject(object):
         self.environment = jinja2.Environment()
         self.environment.globals.update(id=__class__._get_id)
     
-    def __call__(self, index):
+    def get_script(self, index):
         return self.template.render(index=index, **vars(self))
     
     @staticmethod

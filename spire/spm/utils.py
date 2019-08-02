@@ -32,7 +32,7 @@ def find(matlab="matlab", matlab_path=None):
     
     return last_line.decode()
 
-def script(tools, standalone=True, exit=True, modality="fmri"):
+def get_script(tools, standalone=True, exit=True, modality="fmri"):
     """ Return a Matlab script running the provided tools. If standalone is 
         True, then the script will include SPM initialization commands and the
         resulting script can be directly fed to Matlab. If standalone is False,
@@ -48,7 +48,7 @@ def script(tools, standalone=True, exit=True, modality="fmri"):
         ])
     
     for index, tool in enumerate(tools):
-        script.append(tool(1+index))
+        script.append(tool.get_script(1+index))
     
     if standalone:
         script.append("spm_jobman('run',matlabbatch);")
@@ -63,7 +63,7 @@ def run(jobs, matlab="matlab"):
     """
     
     fd, path = tempfile.mkstemp(suffix=".m")
-    os.write(fd, script(jobs).encode())
+    os.write(fd, get_script(jobs).encode())
     os.close(fd)
 
     try:

@@ -231,10 +231,10 @@ class FactorialDesign(SPMObject):
     def spmmat(self):
         return pathlib.Path(self.output_directory)/"SPM.mat"
     
-    def __call__(self, index):
-        self._design = self.design(index)
-        self._covariates = self.covariates(index)
-        self._masking = self.masking(index)
-        self._global_calculation = self.global_calculation(index)
-        self._global_normalization = self.global_normalization(index)
-        return super().__call__(index)
+    def get_script(self, index):
+        self._design = self.design.get_script(index)
+        self._covariates = self.covariates.get_script(index)
+        self._masking = self.masking.get_script(index)
+        self._global_calculation = self.global_calculation.get_script(index)
+        self._global_normalization = self.global_normalization.get_script(index)
+        return super().get_script(index)

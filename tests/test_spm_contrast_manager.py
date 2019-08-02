@@ -14,14 +14,14 @@ class TestSPMContrastManager(unittest.TestCase):
             matlabbatch{1}.spm.stats.con.consess{1}.tcon.weights = [1 -1 0];
             matlabbatch{1}.spm.stats.con.consess{1}.tcon.sessrep = 'none';
             matlabbatch{1}.spm.stats.con.delete = 1;""")
-        self.assertEqual(manager(1), expected)
+        self.assertEqual(manager.get_script(1), expected)
         
         for replication in ["repl", "replsc", "sess", "both", "bothsc"]:
             manager = spire.spm.contrast_manager.ContrastManager(
                 "/output/SPM.mat",
                 [spire.spm.contrast_manager.Contrast("foo", [1, -1, 0], replication)])
             self.assertEqual(
-                manager(1), 
+                manager.get_script(1), 
                 expected.replace(
                     "sessrep = 'none'", "sessrep = '{}'".format(replication)))
     

@@ -5,7 +5,7 @@ import spire.spm
 
 class TestSPMUtils(unittest.TestCase):
     def test_script(self):
-        script = spire.spm.script([
+        script = spire.spm.get_script([
             spire.spm.factorial_design.FactorialDesign(
                 "/output",
                 spire.spm.factorial_design.TwoSamplesTTest(
