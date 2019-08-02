@@ -17,17 +17,28 @@ class Contrast(object):
         self.replication = replication
 
 class ContrastManager(SPMObject):
-    def __init__(self, spmmat, contrasts=None):
+    def __init__(self, design, contrasts=None):
         super().__init__("spm.stats.con")
         
-        self.spmmat = spmmat
+        self.design = design
         self.contrasts = contrasts or []
         
         self.template = self.environment.from_string(textwrap.dedent("""\
-            {{ id(index, name) }}.spmmat = {'{{ spmmat }}'};
+            {{ id(index, name) }}.spmmat = {'{{ design.spmmat }}'};
             {% for contrast in contrasts -%}
             {{ id(index, name) }}.consess{{ "{"+(loop.index|string)+"}" }}.tcon.name = '{{ contrast.name }}';
             {{ id(index, name) }}.consess{{ "{"+(loop.index|string)+"}" }}.tcon.weights = [{{ contrast.weights|join(" ") }}];
             {{ id(index, name) }}.consess{{ "{"+(loop.index|string)+"}" }}.tcon.sessrep = '{{ contrast.replication }}';
             {% endfor -%}
             {{ id(index, name) }}.delete = 1;"""))
+    
+    def _get_targets(self):
+        targets = [self.design.spmmat]
+        
+        directory = self.design.spmmat.parent
+        for index, contrast in enumerate(self.contrasts):
+            type_ = "F" if numpy.squeeze(contrast.weights).ndim > 1 else "T"
+            targets.extend([
+                directory/"con_{:04d}.nii".format(1+index),
+                directory/"spm{}_{:04d}.nii".format(type_, 1+index)])
+        return targets

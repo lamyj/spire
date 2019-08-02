@@ -238,3 +238,6 @@ class FactorialDesign(SPMObject):
         self._global_calculation = self.global_calculation.get_script(index)
         self._global_normalization = self.global_normalization.get_script(index)
         return super().get_script(index)
+    
+    def _get_targets(self):
+        return [self.spmmat]
