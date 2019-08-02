@@ -63,7 +63,7 @@ def run(jobs, matlab="matlab"):
     """
     
     fd, path = tempfile.mkstemp(suffix=".m")
-    os.write(fd, get_script(jobs).encode())
+    os.write(fd, "cd {}; {}".format(os.getcwd(), get_script(jobs)).encode())
     os.close(fd)
 
     try:
