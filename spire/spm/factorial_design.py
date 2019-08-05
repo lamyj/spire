@@ -1,3 +1,4 @@
+import itertools
 import pathlib
 import textwrap
 
@@ -123,6 +124,10 @@ class OneSampleTTest(SPMObject):
             {% endfor -%}
             {{ ((id(index, name)+".scans = {")|length)*" " }}};
             """))
+    
+    @property
+    def file_dep(self):
+        return sorted(set(self.scans))
 
 class TwoSamplesTTest(SPMObject):
     def __init__(
@@ -154,6 +159,10 @@ class TwoSamplesTTest(SPMObject):
             {{ id(index, name) }}.gmsca = {{ grand_mean_scaling|int }};
             {{ id(index, name) }}.ancova = {{ ancova|int }};
             """))
+    
+    @property
+    def file_dep(self):
+        return sorted(set(itertools.chain(self.scans1, self.scans2)))
 
 class PairedTTest(SPMObject):
     def __init__(self, pairs, grand_mean_scaling=False, ancova=False):
@@ -174,6 +183,10 @@ class PairedTTest(SPMObject):
             {{ id(index, name) }}.gmsca = {{ grand_mean_scaling|int }};
             {{ id(index, name) }}.ancova = {{ ancova|int }};
             """))
+    
+    @property
+    def file_dep(self):
+        return sorted(set(itertools.chain(*self.pairs)))
 
 class ANOVA(SPMObject):
     def __init__(
@@ -202,6 +215,10 @@ class ANOVA(SPMObject):
             {{ id(index, name) }}.gmsca = {{ grand_mean_scaling|int }};
             {{ id(index, name) }}.ancova = {{ ancova|int }};
             """))
+    
+    @property
+    def file_dep(self):
+        return sorted(set(itertools.chain(*self.cells)))
 
 class FactorialDesign(SPMObject):
     def __init__(
