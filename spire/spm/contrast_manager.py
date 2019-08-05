@@ -1,3 +1,4 @@
+import itertools
 import textwrap
 
 import numpy
@@ -17,6 +18,25 @@ class Contrast(object):
         self.replication = replication
 
 class ContrastManager(SPMObject):
+    
+    @staticmethod
+    def pairwise(design, levels):
+        """ Return all pairwise contrasts of factor with specified levels.
+        """
+        
+        permutations = itertools.permutations(range(len(levels)), 2)
+        contrasts = []
+        for x,y in permutations:
+            name = "{} < {}".format(levels[x], levels[y]) 
+            
+            weights = [0]*len(levels)
+            weights[x] = -1
+            weights[y] = +1
+            
+            contrasts.append(Contrast(name, weights))
+        
+        return ContrastManager(design, contrasts)
+    
     def __init__(self, design, contrasts=None):
         super().__init__("spm.stats.con")
         
