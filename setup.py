@@ -1,11 +1,10 @@
-from codecs import open
 import glob
 import os
 
 from setuptools import setup, find_packages
 
 here = os.path.dirname(os.path.abspath(__file__))
-with open(os.path.join(here, "README.md"), encoding="utf-8") as f:
+with open(os.path.join(here, "README.md")) as f:
     long_description = f.read()
 
 setup(
@@ -14,6 +13,7 @@ setup(
     
     description="Run software pipelines using doit",
     long_description=long_description,
+    long_description_content_type="text/markdown",
     
     url="https://github.com/lamyj/spire",
     
