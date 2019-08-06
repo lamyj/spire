@@ -21,7 +21,7 @@ def find(matlab="matlab", matlab_path=None):
     try:
         output = subprocess.check_output([
             matlab, "-nodisplay", "-nosplash", "-nojvm", "-r", script])
-    except CalledProcessError as e:
+    except subprocess.CalledProcessError as e:
         raise Exception("Could not find SPM: {}".format(e))
     last_line = output.splitlines()[-1]
     # Weird data at the end of the line

@@ -19,4 +19,5 @@ class Stats(TaskFactory):
         self.actions = [
             # Make sure SPM.mat is not there when we start
             ["rm", "-f", design.spmmat],
-            lambda: utils.run(steps)]
+            (utils.run, (steps,))
+        ]
