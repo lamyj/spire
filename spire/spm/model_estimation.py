@@ -13,10 +13,10 @@ class ModelEstimation(SPMObject):
             raise Exception("Unknown method: {}".format(method))
         self.method = method
         
-        self.template = self.environment.from_string(textwrap.dedent("""\
+        self.template = textwrap.dedent("""\
             {{ id(index, name) }}.spmmat = {'{{ design.spmmat }}'};
             {{ id(index, name) }}.write_residuals = {{ write_residuals|int }};
-            {{ id(index, name) }}.method.{{ method }} = 1;"""))
+            {{ id(index, name) }}.method.{{ method }} = 1;""")
     
     def _get_targets(self):
         directory = self.design.spmmat.parent

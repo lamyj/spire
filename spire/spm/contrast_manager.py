@@ -43,14 +43,14 @@ class ContrastManager(SPMObject):
         self.design = design
         self.contrasts = contrasts or []
         
-        self.template = self.environment.from_string(textwrap.dedent("""\
+        self.template = textwrap.dedent("""\
             {{ id(index, name) }}.spmmat = {'{{ design.spmmat }}'};
             {% for contrast in contrasts -%}
             {{ id(index, name) }}.consess{{ "{"+(loop.index|string)+"}" }}.tcon.name = '{{ contrast.name }}';
             {{ id(index, name) }}.consess{{ "{"+(loop.index|string)+"}" }}.tcon.weights = [{{ contrast.weights|join(" ") }}];
             {{ id(index, name) }}.consess{{ "{"+(loop.index|string)+"}" }}.tcon.sessrep = '{{ contrast.replication }}';
             {% endfor -%}
-            {{ id(index, name) }}.delete = 1;"""))
+            {{ id(index, name) }}.delete = 1;""")
     
     def _get_targets(self):
         targets = [self.design.spmmat]

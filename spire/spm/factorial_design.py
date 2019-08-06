@@ -23,7 +23,7 @@ class Masking(SPMObject):
         self.implicit = implicit
         self.explicit = explicit
         
-        self.template = self.environment.from_string(textwrap.dedent("""\
+        self.template = textwrap.dedent("""\
             {%- if threshold_mode == none -%}
             {{ id(index, name) }}.tm.tm_none = 1;
             {%- elif threshold_mode == "absolute" -%}
@@ -32,7 +32,7 @@ class Masking(SPMObject):
             {{ id(index, name) }}.tmr.rthresh = {{ threshold }};
             {%- endif %}
             {{ id(index, name) }}.im = {{ implicit|int }};
-            {{ id(index, name) }}.em = {'{{ explicit}}'};"""))
+            {{ id(index, name) }}.em = {'{{ explicit}}'};""")
 
 class GlobalCalculation(SPMObject):
     def __init__(self, mode="omit", values=None):
@@ -44,14 +44,14 @@ class GlobalCalculation(SPMObject):
         
         self.values = values
         
-        self.template = self.environment.from_string(textwrap.dedent("""\
+        self.template = textwrap.dedent("""\
             {%- if mode == "omit" -%}
             {{ id(index, name) }}.g_omit = 1;
             {%- elif mode == "user" -%}
             {{ id(index, name) }}.g_user.global_uval = [{{ values|join(";") }}];
             {%- elif mode == "mean" -%}
             {{ id(index, name) }}.g_mean = 1;
-            {%- endif -%}"""))
+            {%- endif -%}""")
 
 class GlobalNormalization(SPMObject):
     def __init__(self, value=None, mode=None):
@@ -63,13 +63,13 @@ class GlobalNormalization(SPMObject):
             raise Exception("Invalid mode: {}".format(mode))
         self.mode = {None: 1, "proportional": 2, "ancova": 3}[mode]
         
-        self.template = self.environment.from_string(textwrap.dedent("""\
+        self.template = textwrap.dedent("""\
             {%- if value == none -%}
             {{ id(index, name) }}.gmsca.gmsca_no = 1;
             {%- else -%}
             {{ id(index, name) }}.gmsca.gmsca_yes.gmscv = {{ value }};
             {%- endif %}
-            {{ id(index, name) }}.glonorm = {{ mode }};"""))
+            {{ id(index, name) }}.glonorm = {{ mode }};""")
 
 class Covariate(object):
     def __init__(self, cname, values, interactions=None, centering="Overall mean"):
@@ -95,7 +95,7 @@ class Covariates(SPMObject):
     def __init__(self, covariates):
         super().__init__("spm.stats.factorial_design.cov")
         self.covariates = covariates
-        self.template = self.environment.from_string(textwrap.dedent("""\
+        self.template = textwrap.dedent("""\
             {%- if covariates -%}
             {% for covariate in covariates -%}
             {{ id(index, name) }}({{ loop.index }}).c = [
@@ -109,7 +109,7 @@ class Covariates(SPMObject):
             {% endfor -%}
             {%- else -%}
             {{ id(index, name) }} = struct('c', {}, 'cname', {}, 'iCFI', {}, 'iCC', {});
-            {%- endif -%}"""))
+            {%- endif -%}""")
 
 # Mutliple covariates
 
@@ -117,13 +117,13 @@ class OneSampleTTest(SPMObject):
     def __init__(self, scans):
         super().__init__("spm.stats.factorial_design.des.t1")
         self.scans = scans
-        self.template = self.environment.from_string(textwrap.dedent("""\
+        self.template = textwrap.dedent("""\
             {{ id(index, name) }}.scans = {
             {% for scan in scans -%}
             {{ ((id(index, name)+".scans = {")|length)*" " }}'{{ scan }}'
             {% endfor -%}
             {{ ((id(index, name)+".scans = {")|length)*" " }}};
-            """))
+            """)
     
     @property
     def file_dep(self):
@@ -143,7 +143,7 @@ class TwoSamplesTTest(SPMObject):
         self.grand_mean_scaling = grand_mean_scaling
         self.ancova = ancova
         
-        self.template = self.environment.from_string(textwrap.dedent("""\
+        self.template = textwrap.dedent("""\
             {{ id(index, name) }}.scans1 = {
             {% for scan in scans1 -%}
             {{ ((id(index, name)+".scans1 = {")|length)*" " }}'{{ scan }}'
@@ -158,7 +158,7 @@ class TwoSamplesTTest(SPMObject):
             {{ id(index, name) }}.variance = {{ (not equal_variance)|int }};
             {{ id(index, name) }}.gmsca = {{ grand_mean_scaling|int }};
             {{ id(index, name) }}.ancova = {{ ancova|int }};
-            """))
+            """)
     
     @property
     def file_dep(self):
@@ -172,7 +172,7 @@ class PairedTTest(SPMObject):
         self.grand_mean_scaling = grand_mean_scaling
         self.ancova = ancova
         
-        self.template = self.environment.from_string(textwrap.dedent("""\
+        self.template = textwrap.dedent("""\
             {% for scan1, scan2 in pairs -%}
             {{ id(index, name) }}.pair({{ loop.index }}) = {
             {{ ((id(index, name)+".pair("+(loop.index|string)+") = {")|length)*" " }}'{{ scan1 }}'
@@ -182,7 +182,7 @@ class PairedTTest(SPMObject):
             
             {{ id(index, name) }}.gmsca = {{ grand_mean_scaling|int }};
             {{ id(index, name) }}.ancova = {{ ancova|int }};
-            """))
+            """)
     
     @property
     def file_dep(self):
@@ -201,7 +201,7 @@ class ANOVA(SPMObject):
         self.grand_mean_scaling = grand_mean_scaling
         self.ancova = ancova
         
-        self.template = self.environment.from_string(textwrap.dedent("""\
+        self.template = textwrap.dedent("""\
             {% for cell in cells -%}
             {{ id(index, name) }}.icell({{ loop.index }}).scans = {
             {% set padding=((id(index, name)+".icell("+(loop.index|string)+").scans = {")|length)*" " -%}
@@ -214,7 +214,7 @@ class ANOVA(SPMObject):
             {{ id(index, name) }}.variance = {{ (not equal_variance)|int }};
             {{ id(index, name) }}.gmsca = {{ grand_mean_scaling|int }};
             {{ id(index, name) }}.ancova = {{ ancova|int }};
-            """))
+            """)
     
     @property
     def file_dep(self):
@@ -234,7 +234,7 @@ class FactorialDesign(SPMObject):
         self.global_calculation = global_calculation or GlobalCalculation()
         self.global_normalization = global_normalization or GlobalNormalization()
     
-        self.template = self.environment.from_string(textwrap.dedent("""\
+        self.template = textwrap.dedent("""\
             {{ id(index, name) }}.dir = {'{{ output_directory }}'};
             {{ _design }}
             {{ _covariates }}
@@ -242,7 +242,7 @@ class FactorialDesign(SPMObject):
             {{ _masking }}
             {{ _global_calculation }}
             {{ _global_normalization }}
-            """))
+            """)
     
     @property
     def spmmat(self):
