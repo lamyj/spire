@@ -9,7 +9,7 @@ with open(os.path.join(here, "README.md")) as f:
 
 setup(
     name="spire-pipeline",
-    version="1.0.0",
+    version="1.0.1",
     
     description="Run software pipelines using doit",
     long_description=long_description,
