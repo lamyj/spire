@@ -262,7 +262,7 @@ class FactorialDesign(SPMObject):
     
     @property
     def file_dep(self):
-        return list(itertools.chain(self.design.targets, self.masking.targets))
+        return list(itertools.chain(self.design.file_dep, self.masking.file_dep))
     
     def _get_targets(self):
         return [self.spmmat]
