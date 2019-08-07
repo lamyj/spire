@@ -33,6 +33,10 @@ class Masking(SPMObject):
             {%- endif %}
             {{ id(index, name) }}.im = {{ implicit|int }};
             {{ id(index, name) }}.em = {'{{ explicit}}'};""")
+    
+    @property
+    def file_dep(self):
+        return [self.explicit] if self.explicit else []
 
 class GlobalCalculation(SPMObject):
     def __init__(self, mode="omit", values=None):
@@ -255,6 +259,10 @@ class FactorialDesign(SPMObject):
         self._global_calculation = self.global_calculation.get_script(index)
         self._global_normalization = self.global_normalization.get_script(index)
         return super().get_script(index)
+    
+    @property
+    def file_dep(self):
+        return list(itertools.chain(self.design.targets, self.masking.targets))
     
     def _get_targets(self):
         return [self.spmmat]

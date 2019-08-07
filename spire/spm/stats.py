@@ -14,7 +14,7 @@ class Stats(TaskFactory):
         
         steps = [design, estimation, contrasts]
         
-        self.file_dep = design.design.file_dep
+        self.file_dep = design.file_dep
         self.targets = list(set(itertools.chain(*[x.targets for x in steps])))
         self.actions = [
             # Make sure SPM.mat is not there when we start
