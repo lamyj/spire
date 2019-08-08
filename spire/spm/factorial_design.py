@@ -8,7 +8,7 @@ class Masking(SPMObject):
     def __init__(self, 
             threshold_mode=None, threshold=None, implicit=True, explicit=""):
         
-        super().__init__("spm.stats.factorial_design.masking")
+        SPMObject.__init__(self, "spm.stats.factorial_design.masking")
         if threshold_mode not in [None, "absolute", "relative"]:
             raise Exception("Invalid threshold mode: {}".format(threshold_mode))
         self.threshold_mode = threshold_mode
@@ -40,7 +40,7 @@ class Masking(SPMObject):
 
 class GlobalCalculation(SPMObject):
     def __init__(self, mode="omit", values=None):
-        super().__init__("spm.stats.factorial_design.globalc")
+        SPMObject.__init__(self, "spm.stats.factorial_design.globalc")
         
         if mode not in ["omit", "user", "mean"]:
             raise Exception("Invalid mode: {}".format(mode))
@@ -59,7 +59,7 @@ class GlobalCalculation(SPMObject):
 
 class GlobalNormalization(SPMObject):
     def __init__(self, value=None, mode=None):
-        super().__init__("spm.stats.factorial_design.globalm")
+        SPMObject.__init__(self, "spm.stats.factorial_design.globalm")
         
         self.value = value
         
@@ -97,7 +97,7 @@ class Covariate(object):
 
 class Covariates(SPMObject):
     def __init__(self, covariates):
-        super().__init__("spm.stats.factorial_design.cov")
+        SPMObject.__init__(self, "spm.stats.factorial_design.cov")
         self.covariates = covariates
         self.template = textwrap.dedent("""\
             {%- if covariates -%}
@@ -119,7 +119,7 @@ class Covariates(SPMObject):
 
 class OneSampleTTest(SPMObject):
     def __init__(self, scans):
-        super().__init__("spm.stats.factorial_design.des.t1")
+        SPMObject.__init__(self, "spm.stats.factorial_design.des.t1")
         self.scans = scans
         self.template = textwrap.dedent("""\
             {{ id(index, name) }}.scans = {
@@ -139,7 +139,7 @@ class TwoSamplesTTest(SPMObject):
             independence=True, equal_variance=False, grand_mean_scaling=False,
             ancova=False):
         
-        super().__init__("spm.stats.factorial_design.des.t2")
+        SPMObject.__init__(self, "spm.stats.factorial_design.des.t2")
         self.scans1 = scans1
         self.scans2 = scans2
         self.independence = independence
@@ -171,7 +171,7 @@ class TwoSamplesTTest(SPMObject):
 class PairedTTest(SPMObject):
     def __init__(self, pairs, grand_mean_scaling=False, ancova=False):
         
-        super().__init__("spm.stats.factorial_design.des.pt")
+        SPMObject.__init__(self, "spm.stats.factorial_design.des.pt")
         self.pairs = pairs
         self.grand_mean_scaling = grand_mean_scaling
         self.ancova = ancova
@@ -198,7 +198,7 @@ class ANOVA(SPMObject):
             independance=True, equal_variance=False, grand_mean_scaling=False,
             ancova=False):
         
-        super().__init__("spm.stats.factorial_design.des.anova")
+        SPMObject.__init__(self, "spm.stats.factorial_design.des.anova")
         self.cells = cells
         self.independance = independance
         self.equal_variance = equal_variance
@@ -229,7 +229,7 @@ class FactorialDesign(SPMObject):
             self, output_directory, design, covariates=None,
             masking=None, global_calculation=None, global_normalization=None):
         
-        super().__init__("spm.stats.factorial_design")
+        SPMObject.__init__(self, "spm.stats.factorial_design")
         
         self.output_directory = output_directory
         self.design = design
@@ -258,7 +258,7 @@ class FactorialDesign(SPMObject):
         self._masking = self.masking.get_script(index)
         self._global_calculation = self.global_calculation.get_script(index)
         self._global_normalization = self.global_normalization.get_script(index)
-        return super().get_script(index)
+        return SPMObject.get_script(self, index)
     
     @property
     def file_dep(self):

@@ -4,7 +4,7 @@ from .spm_object import SPMObject
 
 class ModelEstimation(SPMObject):
     def __init__(self, design, write_residuals=False, method="Classical"):
-        super().__init__("spm.stats.fmri_est")
+        SPMObject.__init__(self, "spm.stats.fmri_est")
         
         self.design = design
         self.write_residuals = write_residuals

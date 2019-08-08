@@ -4,7 +4,7 @@ from .spm_object import SPMObject
 
 class ImageCalculator(SPMObject):
     def __init__(self, inputs, output, expression, dtype="int16"):
-        super().__init__("spm.util.imcalc")
+        SPMObject.__init__(self, "spm.util.imcalc")
         
         self.inputs = inputs
         self.output = output

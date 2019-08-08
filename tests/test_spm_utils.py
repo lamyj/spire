@@ -5,13 +5,12 @@ import spire.spm
 
 class TestSPMUtils(unittest.TestCase):
     def test_script(self):
+        design = spire.spm.factorial_design.FactorialDesign(
+            "/output",
+            spire.spm.factorial_design.TwoSamplesTTest(
+                ["foo", "bar", "baz"], ["plip", "plop"]))
         script = spire.spm.get_script([
-            spire.spm.factorial_design.FactorialDesign(
-                "/output",
-                spire.spm.factorial_design.TwoSamplesTTest(
-                    ["foo", "bar", "baz"], ["plip", "plop"])),
-            spire.spm.ModelEstimation("/output/SPM.mat")
-        ])
+            design, spire.spm.ModelEstimation(design)])
         self.assertEqual(
             script,
             textwrap.dedent("""\

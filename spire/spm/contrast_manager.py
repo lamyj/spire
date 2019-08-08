@@ -38,7 +38,7 @@ class ContrastManager(SPMObject):
         return ContrastManager(design, contrasts)
     
     def __init__(self, design, contrasts=None):
-        super().__init__("spm.stats.con")
+        SPMObject.__init__(self, "spm.stats.con")
         
         self.design = design
         self.contrasts = contrasts or []
