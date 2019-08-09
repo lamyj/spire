@@ -57,6 +57,9 @@ class ContrastManager(SPMObject):
             {% endfor -%}
             {{ id(index, name) }}.delete = 1;""")
     
+    def _get_file_dep(self):
+        return [self.design.spmmat]
+    
     def _get_targets(self):
         targets = [self.design.spmmat]
         

@@ -40,8 +40,7 @@ class Masking(SPMObject):
             {{ id(index, name) }}.im = {{ implicit|int }};
             {{ id(index, name) }}.em = {'{{ explicit}}'};""")
     
-    @property
-    def file_dep(self):
+    def _get_file_dep(self):
         return [self.explicit] if self.explicit else []
 
 class GlobalCalculation(SPMObject):
@@ -161,8 +160,7 @@ class OneSampleTTest(SPMObject):
             {{ ((id(index, name)+".scans = {")|length)*" " }}};
             """)
     
-    @property
-    def file_dep(self):
+    def _get_file_dep(self):
         return sorted(set(self.scans))
 
 class TwoSamplesTTest(SPMObject):
@@ -196,8 +194,7 @@ class TwoSamplesTTest(SPMObject):
             {{ id(index, name) }}.ancova = {{ ancova|int }};
             """)
     
-    @property
-    def file_dep(self):
+    def _get_file_dep(self):
         return sorted(set(itertools.chain(self.scans1, self.scans2)))
 
 class PairedTTest(SPMObject):
@@ -220,8 +217,7 @@ class PairedTTest(SPMObject):
             {{ id(index, name) }}.ancova = {{ ancova|int }};
             """)
     
-    @property
-    def file_dep(self):
+    def _get_file_dep(self):
         return sorted(set(itertools.chain(*self.pairs)))
 
 class ANOVA(SPMObject):
@@ -255,8 +251,7 @@ class ANOVA(SPMObject):
             {{ id(index, name) }}.ancova = {{ ancova|int }};
             """)
     
-    @property
-    def file_dep(self):
+    def _get_file_dep(self):
         return sorted(set(itertools.chain(*self.cells)))
 
 class FactorialDesign(SPMObject):
@@ -304,8 +299,7 @@ class FactorialDesign(SPMObject):
         self._global_normalization = self.global_normalization.get_script(index)
         return SPMObject.get_script(self, index)
     
-    @property
-    def file_dep(self):
+    def _get_file_dep(self):
         return list(itertools.chain(self.design.file_dep, self.masking.file_dep))
     
     def _get_targets(self):

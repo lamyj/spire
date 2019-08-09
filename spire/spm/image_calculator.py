@@ -45,5 +45,8 @@ class ImageCalculator(SPMObject):
             {{ id(index, name) }}.options.interp = 1;
             {{ id(index, name) }}.options.dtype = {{ _dtypes_map[dtype] }};""")
     
+    def _get_file_dep(self):
+        return sorted(set(seilf.inputs))
+    
     def _get_targets(self):
         return [self.output]

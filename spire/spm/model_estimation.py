@@ -25,6 +25,9 @@ class ModelEstimation(SPMObject):
             {{ id(index, name) }}.write_residuals = {{ write_residuals|int }};
             {{ id(index, name) }}.method.{{ method }} = 1;""")
     
+    def _get_file_dep(self):
+        return [self.design.spmmat]
+    
     def _get_targets(self):
         directory = self.design.spmmat.parent
         targets = [
