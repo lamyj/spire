@@ -6,6 +6,9 @@ import numpy
 from .spm_object import SPMObject
 
 class Contrast(object):
+    """ T-constrast of F-contrast.
+    """
+    
     def __init__(self, name, weights, replication="none"):
         self.name = name
         self.weights = numpy.asarray(weights)
@@ -18,6 +21,8 @@ class Contrast(object):
         self.replication = replication
 
 class ContrastManager(SPMObject):
+    """ Specify T and F contrasts
+    """
     
     @staticmethod
     def pairwise(design, levels):

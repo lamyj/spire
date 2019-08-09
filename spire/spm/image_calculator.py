@@ -3,6 +3,14 @@ import textwrap
 from .spm_object import SPMObject
 
 class ImageCalculator(SPMObject):
+    """ The image calculator is for performing user-specified algebraic 
+        manipulations on a set of images. The result is being written out as an 
+        image. The user is prompted to supply images to work on, a filename for 
+        the output  image, and the expression to evaluate. The expression should 
+        be a standard MATLAB expression, within which the images should be 
+        referred to as i1, i2, i3,... etc.
+    """
+    
     def __init__(self, inputs, output, expression, dtype="int16"):
         SPMObject.__init__(self, "spm.util.imcalc")
         

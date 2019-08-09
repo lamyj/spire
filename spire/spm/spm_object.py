@@ -1,6 +1,9 @@
 import jinja2
 
 class SPMObject(object):
+    """ Abstract Base Class for all SPM objects.
+    """
+    
     def __init__(self, name):
         self.name = name
         self.environment = jinja2.Environment()

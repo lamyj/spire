@@ -3,6 +3,13 @@ import textwrap
 from .spm_object import SPMObject
 
 class ModelEstimation(SPMObject):
+    """ Estimation of model parameters using classical (ReML - Restricted 
+        Maximum Likelihood) or Bayesian algorithms. After  parameter estimation,
+        the 'Results' button can be used to specify contrasts that will produce 
+        Statistical Parametric Maps (SPMs) or Posterior Probability Maps (PPMs) 
+        and tables of statistics.
+    """
+    
     def __init__(self, design, write_residuals=False, method="Classical"):
         SPMObject.__init__(self, "spm.stats.fmri_est")
         

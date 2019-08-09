@@ -5,6 +5,12 @@ import textwrap
 from .spm_object import SPMObject
 
 class Masking(SPMObject):
+    """ The mask specifies the voxels within the image volume which are to be
+        assessed. SPM supports three methods of masking: (1) Threshold, 
+        (2) Implicit and (3) Explicit. The volume analysed is the intersection
+        of all masks.
+    """
+    
     def __init__(self, 
             threshold_mode=None, threshold=None, implicit=True, explicit=""):
         
@@ -39,6 +45,14 @@ class Masking(SPMObject):
         return [self.explicit] if self.explicit else []
 
 class GlobalCalculation(SPMObject):
+    """ This option is for PET or VBM data (not second level fMRI).
+        
+        There  are three methods for estimating global effects (1) Omit 
+        (assumming no other options requiring the global value chosen) (2) User 
+        defined (enter your own vector of global values) (3) Mean: SPM standard 
+        mean voxel value (within per image fullmean/8 mask).
+    """
+    
     def __init__(self, mode="omit", values=None):
         SPMObject.__init__(self, "spm.stats.factorial_design.globalc")
         
@@ -58,6 +72,16 @@ class GlobalCalculation(SPMObject):
             {%- endif -%}""")
 
 class GlobalNormalization(SPMObject):
+    """ These options are for PET or VBM data (not second level fMRI).
+        
+        'Overall grand mean scaling'  imply scales all the data by a common 
+        factor such that the mean of all the global values is the value 
+        specified.
+        
+        'Normalisation' refers to either proportionally scaling each image or 
+        adding a covariate to adjust for the global values.
+    """
+    
     def __init__(self, value=None, mode=None):
         SPMObject.__init__(self, "spm.stats.factorial_design.globalm")
         
@@ -76,6 +100,9 @@ class GlobalNormalization(SPMObject):
             {{ id(index, name) }}.glonorm = {{ mode }};""")
 
 class Covariate(object):
+    """ Covariate of the experimental design.
+    """
+    
     def __init__(self, cname, values, interactions=None, centering="Overall mean"):
         self.cname = cname
         self.values = values
@@ -96,6 +123,11 @@ class Covariate(object):
         self.centering = 1+known_centering.index(centering)
 
 class Covariates(SPMObject):
+    """ This  option  allows  for the specification of covariates and nuisance 
+        variables (note that SPM does not make any distinction between effects 
+        of interest (including covariates) and nuisance effects).
+    """
+    
     def __init__(self, covariates):
         SPMObject.__init__(self, "spm.stats.factorial_design.cov")
         self.covariates = covariates
@@ -193,6 +225,9 @@ class PairedTTest(SPMObject):
         return sorted(set(itertools.chain(*self.pairs)))
 
 class ANOVA(SPMObject):
+    """ One-way Analysis of Variance (ANOVA).
+    """
+    
     def __init__(
             self, cells,
             independance=True, equal_variance=False, grand_mean_scaling=False,
@@ -225,6 +260,15 @@ class ANOVA(SPMObject):
         return sorted(set(itertools.chain(*self.cells)))
 
 class FactorialDesign(SPMObject):
+    """ Configuration  of the design matrix, describing the general linear 
+        model, data specification, and other parameters necessary for the 
+        statistical analysis.
+        These  parameters are saved in a configuration file (SPM.mat), which can
+        then be passed on to ModelEstimation which estimates the design. 
+        Inference on these estimated parameters is then handled by the SPM 
+        results section.
+    """
+    
     def __init__(
             self, output_directory, design, covariates=None,
             masking=None, global_calculation=None, global_normalization=None):
