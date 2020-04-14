@@ -10,14 +10,15 @@ class Registration(TaskFactory):
         images, and may include an optional volume to use in case of 4D images:
         passing (foo.nii.gz,0) will use the first 3D volume of the 4D foo.nii.gz
         for the registration. transform must be one of "rigid", "affine" or 
-        "syn".
+        "syn". initial_transforms must be either None (its default value) or a
+        list of transforms.
         
         This task stores the transforms in a specific member, in the order they
         should be passed to ApplyTransforms.
     """
     def __init__(
             self, fixed, moving, transform, prefix, 
-            save_warped=True, quick=False):
+            save_warped=True, quick=False, initial_transforms=None):
         TaskFactory.__init__(self, prefix)
         self.quick = quick
         
@@ -69,6 +70,8 @@ class Registration(TaskFactory):
         # Update the command with the transforms. WARNING: antsApplyTransforms
         # uses a transform _stack_.
         self.transforms = []
+        registration += self.initial_stage(
+            fixed_volume, moving_volume, initial_transforms)
         if transform.lower() in ["rigid", "affine", "syn"]:
             registration += self.rigid_stage(fixed_volume, moving_volume)
             self.transforms.insert(0, "{}{}".format(prefix, "0GenericAffine.mat"))
@@ -101,9 +104,16 @@ class Registration(TaskFactory):
                 result.append(transform.replace("Warp.nii", "InverseWarp.nii"))
         return result
     
+    def initial_stage(self, fixed, moving, initial_transforms):
+        if not initial_transforms:
+            initial_transforms = ["[{},{},1]".format(fixed, moving)]
+        transforms = []
+        for item in initial_transforms:
+            transforms.extend(["--initial-moving-transform", item])
+        return transforms
+    
     def rigid_stage(self, fixed, moving):
         return [
-            "--initial-moving-transform", "[{},{},1]".format(fixed, moving),
             "--transform", "Rigid[0.1]",
             "--metric", "MI[{},{},1,32,Regular,0.25]".format(fixed, moving),
             "--convergence", "[1000x500x250x{},1e-6,10]".format(
