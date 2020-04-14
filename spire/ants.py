@@ -18,7 +18,8 @@ class Registration(TaskFactory):
     """
     def __init__(
             self, fixed, moving, transform, prefix, 
-            save_warped=True, quick=False, initial_transforms=None):
+            save_warped=True, quick=False, precision="double", 
+            initial_transforms=None):
         TaskFactory.__init__(self, prefix)
         self.quick = quick
         
@@ -48,7 +49,8 @@ class Registration(TaskFactory):
         # Prepare the registration command
         registration = runner+[
             "antsRegistration",
-            "--dimensionality", "3", "--float", "0",
+            "--dimensionality", "3", 
+            "--float", "0" if precision == "double" else "1",
             "--interpolation", "Linear", 
             "--winsorize-image-intensities", "[0.005,0.995]",
             "--use-histogram-matching", "0",
