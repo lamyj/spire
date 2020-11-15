@@ -1,5 +1,4 @@
 import os
-import tempfile
 
 from .task_factory import TaskFactory
 
@@ -34,8 +33,11 @@ class Registration(TaskFactory):
                 
                 self.file_dep.append(path)
                 
-                fd, temp = tempfile.mkstemp(suffix=".nii.gz")
-                os.close(fd)
+                # WARNING: this is a hard-coded name, but using temporary files
+                # will change the hash of the command each time.
+                temp = os.path.join(
+                    os.path.dirname(prefix), 
+                    "__{}_{}.nii.gz".format(os.path.basename(input), index))
                 
                 volumes.append(temp)
                 extractions.append(
@@ -158,8 +160,11 @@ class ApplyTransforms(TaskFactory):
         removal = []
         if isinstance(reference, (list, tuple)):
             reference_path, index = reference
-            fd, reference_volume = tempfile.mkstemp(suffix=".nii.gz")
-            os.close(fd)
+            # WARNING: this is a hard-coded name, but using temporary files
+            # will change the hash of the command each time.
+            reference_volume = os.path.join(
+                os.path.dirname(output), 
+                "__{}_{}.nii.gz".format(os.path.basename(input), index))
             
             extraction.append(runner+[
                 "ImageMath", "4", reference_volume, 
