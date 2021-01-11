@@ -19,7 +19,7 @@ class Registration(TaskFactory):
             self, fixed, moving, transform, prefix, 
             save_warped=True, quick=False, precision="double", 
             initial_transforms=None):
-        TaskFactory.__init__(self, prefix)
+        TaskFactory.__init__(self, str(prefix))
         self.quick = quick
         
         # Prepare the volume extraction if necessary
@@ -154,7 +154,7 @@ class ApplyTransforms(TaskFactory):
     def __init__(
             self, input, reference, transforms, output, 
             interpolation="BSpline", input_image_type="scalar"):
-        TaskFactory.__init__(self, output)
+        TaskFactory.__init__(self, str(output))
         
         extraction = []
         removal = []
