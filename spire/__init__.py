@@ -41,31 +41,22 @@ if doit.loader.load_tasks != spire_load_tasks:
 ################################################################################
 
 def prune():
-    task_list = []
-    spire_task_dict = {}
-    
-    # Look at creators in the caller's globals 
     caller = inspect.getouterframes(inspect.currentframe())[1][0]
+    tasks = doit.loader.load_tasks(caller.f_globals)
     
-    # https://github.com/pydoit/doit/blob/0.31.1/doit/loader.py#L129-L133
-    creators = doit.loader._get_task_creators(caller.f_globals, [])
-    creators.sort(key=lambda obj: obj[2])
-    creators.extend(
-        [(None, x.as_task_dict, None) for x in TaskFactory._task_registry])
-    
-    graph = TaskGraph()
-    graph.build(creators)
+    graph = TaskGraph(tasks)
     
     to_skip = []
-    for (doit_task, spire_task) in graph.tasks.values():
+    for name, doit_task in graph.doit_tasks.items():
         if "" in doit_task.file_dep:
-            to_skip.append(doit_task.name)
+            to_skip.append(name)
     
-    # Breadth-first traversal of the dependency tree, marking request tasks and
-    # their descendents as skipped
     while len(to_skip) > 0:
         root = to_skip.pop()
-        doit_task, spire_task = graph.tasks[root]
+        spire_task = graph.spire_tasks.get(root)
+        if spire_task is None:
+            logging.info("Not a spire task: {}".format(root))
+            continue
         if not getattr(spire_task, "skipped", False):
             logging.warning("Skipping {}".format(root))
             spire_task.skipped = True
@@ -75,52 +66,48 @@ def prune():
 # Representation of the task graph in the Graphviz format                      #
 ################################################################################
 
-def graph(tasks_only=False):
-    task_list = []
-    spire_task_dict = {}
-    
-    # Look at creators in the caller's globals 
+def graph(name_mapper=None):
     caller = inspect.getouterframes(inspect.currentframe())[1][0]
+    tasks = doit.loader.load_tasks(caller.f_globals)
     
-    # https://github.com/pydoit/doit/blob/0.31.1/doit/loader.py#L129-L133
-    creators = doit.loader._get_task_creators(caller.f_globals, [])
-    creators.sort(key=lambda obj: obj[2])
-    creators.extend(
-        [(None, x.as_task_dict, None) for x in TaskFactory._task_registry])
+    graph = TaskGraph(tasks)
     
-    graph = TaskGraph()
-    graph.build(creators)
+    if name_mapper is None:
+        name_mapper = lambda x: x
     
     def quote(name):
-        return "\"{}\"".format(name.replace("\"", "\\\""))
+        return "\"{}\"".format(name_mapper(name).replace("\"", "\\\""))
     
     lines = ["digraph {"]
     
-    deps_and_targets = set()
-    for name, (doit_task, _) in graph.tasks.items():
-        lines.append("    {}[shape=box];".format(quote(name)))
-        if not tasks_only:
-            for entry in itertools.chain(doit_task.file_dep, doit_task.targets):
-                if entry not in deps_and_targets:
-                    deps_and_targets.add(entry)
+    file_deps = set()
+    targets = set()
+    nodes = set()
+    for task in graph.doit_tasks.values():
+        file_deps.update(task.file_dep)
+        targets.update(task.targets)
+    for name, doit_task in graph.doit_tasks.items():
+        if name not in nodes:
+            lines.append("    {}[shape=box];".format(quote(name)))
+        for entry in graph.doit_tasks[name].file_dep:
+            if entry not in targets:
+                if entry not in nodes:
                     lines.append(
-                        "    {}[shape=parallelogram];".format(quote(entry)))
-        
-            # We can create the edges now: the task, deps and targets node are
-            # already present
-            for entry in doit_task.file_dep:
+                        "    {}[shape=box,color=blue];".format(quote(entry)))
+                    nodes.add(entry)
                 lines.append("    {} -> {};".format(quote(entry), quote(name)))
-            for entry in doit_task.targets:
+        for entry in graph.doit_tasks[name].targets:
+            if entry not in file_deps and entry != name:
+                if entry not in nodes:
+                    lines.append(
+                        "    {}[shape=box,color=blue];".format(quote(entry)))
+                    nodes.add(entry)
                 lines.append("    {} -> {};".format(quote(name), quote(entry)))
     
-    if tasks_only:
-        # We need to wait for all task nodes to be created
-        for name, children in graph.children.items():
-            lines.extend(
-                "    {} -> {};".format(quote(name), quote(x)) 
-                for x in children)
-            
-
+    for name, doit_task in graph.doit_tasks.items():
+        for child in graph.children[name]:
+            lines.append("    {} -> {};".format(quote(name), quote(child)))
+    
     lines.extend(["}", ""])
     
     return "\n".join(lines)
