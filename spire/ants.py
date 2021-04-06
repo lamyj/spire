@@ -154,8 +154,8 @@ class ApplyTransforms(TaskFactory):
             interpolation="BSpline", input_image_type="scalar"):
         TaskFactory.__init__(self, str(output))
         
-        extraction = []
-        removal = []
+        extractions = []
+        removals = []
         
         reference_path, index = _get_path_and_index(reference)
         
@@ -166,10 +166,10 @@ class ApplyTransforms(TaskFactory):
                 os.path.dirname(output), 
                 "__{}_{}.nii.gz".format(os.path.basename(output), index))
         
-            extraction = [
+            extractions.append([
                 "ImageMath", "4", reference_volume,
-                "ExtractSlice", reference_path, str(index)]
-            removal = ["rm", reference_volume]
+                "ExtractSlice", reference_path, str(index)])
+            removals.append(["rm", reference_volume])
         else:
             reference_volume = reference_path
         
@@ -191,7 +191,7 @@ class ApplyTransforms(TaskFactory):
                 apply_transforms.append("[{}]".format("{},{}".format(*transform)))
             else:
                 apply_transforms.append(transform)
-        self.actions = extraction+[apply_transforms]+removal
+        self.actions = extractions + [apply_transforms] + removals
 
 def _get_path_and_index(data):
     if isinstance(data, (list, tuple)):
