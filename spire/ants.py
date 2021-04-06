@@ -2,8 +2,6 @@ import os
 
 from .task_factory import TaskFactory
 
-runner = []
-
 class Registration(TaskFactory):
     """ Register two images using ANTs. fixed and moving describe the respective
         images, and may include an optional volume to use in case of 4D images:
@@ -27,29 +25,29 @@ class Registration(TaskFactory):
         volumes = []
         extractions = []
         removals = []
-        for data in fixed, moving:
-            if isinstance(data, (list, tuple)):
-                path, index = data
-                
-                self.file_dep.append(path)
-                
-                # WARNING: this is a hard-coded name, but using temporary files
-                # will change the hash of the command each time.
+        for name, data in [["fixed", fixed], ["moving", moving]]:
+            path, index = _get_path_and_index(data)
+            self.file_dep.append(path)
+            
+            if None not in (path, index):
+                # NOTE Named is based on target, it should be unique since 
+                # target paths are.
                 temp = os.path.join(
                     os.path.dirname(prefix), 
-                    "__{}_{}.nii.gz".format(os.path.basename(input), index))
+                    "__{}_{}_{}.nii.gz".format(
+                        os.path.basename(prefix), name, index))
                 
                 volumes.append(temp)
                 extractions.append(
-                    runner+["ImageMath", "4", temp, "ExtractSlice", path, str(index)])
+                    ["ImageMath", "4", temp, "ExtractSlice", path, str(index)])
                 removals.append(["rm", temp])
             else:
-                self.file_dep.append(data)
-                volumes.append(data)
+                volumes.append(path)
+        
         fixed_volume, moving_volume = volumes
         
         # Prepare the registration command
-        registration = runner+[
+        registration = [
             "antsRegistration",
             "--dimensionality", "3", 
             "--float", "0" if precision == "double" else "1",
@@ -158,21 +156,22 @@ class ApplyTransforms(TaskFactory):
         
         extraction = []
         removal = []
-        if isinstance(reference, (list, tuple)):
-            reference_path, index = reference
-            # WARNING: this is a hard-coded name, but using temporary files
-            # will change the hash of the command each time.
+        
+        reference_path, index = _get_path_and_index(reference)
+        
+        if None not in (reference_path, index):
+            # NOTE Named is based on target, it should be unique since 
+            # target paths are.
             reference_volume = os.path.join(
                 os.path.dirname(output), 
-                "__{}_{}.nii.gz".format(os.path.basename(input), index))
-            
-            extraction.append(runner+[
-                "ImageMath", "4", reference_volume, 
-                "ExtractSlice", reference_path, str(index)])
-            removal.append(["rm", reference_volume])
+                "__{}_{}.nii.gz".format(os.path.basename(output), index))
+        
+            extraction = [
+                "ImageMath", "4", reference_volume,
+                "ExtractSlice", reference_path, str(index)]
+            removal = ["rm", reference_volume]
         else:
-            reference_path = reference
-            reference_volume = reference
+            reference_volume = reference_path
         
         self.file_dep = [input, reference_path]
         for transform in transforms:
@@ -182,7 +181,7 @@ class ApplyTransforms(TaskFactory):
                 self.file_dep.append(transform)
         
         self.targets = [output]
-        apply_transforms = runner+[
+        apply_transforms = [
             "antsApplyTransforms",
             "-i", input, "-r", reference_volume, "-o", output, 
             "-n", interpolation, "-e", input_image_type]
@@ -193,3 +192,10 @@ class ApplyTransforms(TaskFactory):
             else:
                 apply_transforms.append(transform)
         self.actions = extraction+[apply_transforms]+removal
+
+def _get_path_and_index(data):
+    if isinstance(data, (list, tuple)):
+        path, index = data
+    else:
+        path, index = data, None
+    return path, index
