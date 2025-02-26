@@ -62,6 +62,12 @@ def _create_factory_class(function, get_action, extra={}):
         {"__init__": __init__, "__doc__": function.__doc__} | extra)
     
     functools.update_wrapper(cls.__init__, function)
+    # Update the original signature to include "self"
+    signature = inspect.signature(function)
+    cls.__init__.__signature__ = signature.replace(
+        parameters=[
+            inspect.Parameter("self", inspect.Parameter.POSITIONAL_OR_KEYWORD),
+            *signature.parameters.values()])
     cls.__module__ = function.__module__
     
     return cls
