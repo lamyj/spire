@@ -8,6 +8,9 @@ from .task import Task
 from .task_factory import TaskFactory
 from .task_graph import TaskGraph
 
+# NOTE: task_factory decorator hides task_factory module
+from .decorators import command_factory, file_dep, target, task_factory
+
 ################################################################################
 # Replace doit's task loader to include objects created by TaskFactory         #
 ################################################################################
