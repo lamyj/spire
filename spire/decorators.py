@@ -32,13 +32,16 @@ def _get_task_info(action, *args, **kwargs):
     targets = []
     for name, value in parameters.items():
         if value.annotation in [file_dep, target]:
+            if name not in arguments:
+                continue
+            
             argument = arguments[name]
             
             target_list = file_deps if value.annotation is file_dep else targets
             
             if is_iterable(argument):
                 target_list.extend(argument)
-            else:
+            elif argument is not None:
                 target_list.append(argument)
     
     return file_deps, targets
