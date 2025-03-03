@@ -46,7 +46,9 @@ def _get_task_info(action, *args, **kwargs):
     
     return file_deps, targets
 
-def _create_factory_class(function, get_action, extra={}):
+def _create_factory_class(
+        function, get_action, extra={},
+        file_dep_modifier=None, targets_modifier=None):
     """Create a wrapper TaskFactory-derived class around function
     
     :param get_action: function creating the task action
@@ -56,8 +58,8 @@ def _create_factory_class(function, get_action, extra={}):
         file_dep, targets = _get_task_info(function, *args, **kwargs)
         
         spire.TaskFactory.__init__(self, str(targets[0]))
-        self.file_dep = file_dep
-        self.targets = targets
+        self.file_dep = file_dep_modifier(file_dep) if file_dep_modifier else file_dep
+        self.targets = targets_modifier(targets) if targets_modifier else targets
         self.actions = [get_action(*args, **kwargs)]
     
     cls = type(
@@ -75,19 +77,33 @@ def _create_factory_class(function, get_action, extra={}):
     
     return cls
 
-def task_factory(action):
+def task_factory(action=None, /, file_dep=None, targets=None):
     """Convert a function to a TaskFactory having the function as its only
     action. The file_dep and targets are extracted from the type hints of
     the function"""
     
-    return _create_factory_class(
-        action, lambda *args, **kwargs: (action, args, kwargs),
-        {"action": action})
+    def decorator(action):
+        return _create_factory_class(
+            action, lambda *args, **kwargs: (action, args, kwargs),
+            {"action": action},
+            file_dep_modifier=file_dep, targets_modifier=targets)
+    
+    if action is not None:
+        return decorator(action)
+    else:
+        return decorator
 
-def command_factory(action):
+def command_factory(action=None, /, file_dep=None, targets=None):
     """Convert a function to a TaskFactory having the command returned as a
     list by the function as its only action. The file_dep and targets are
     extracted from the type hints of the function"""
     
-    return _create_factory_class(
-        action, lambda *args, **kwargs: action(*args, **kwargs))
+    def decorator(action):
+        return _create_factory_class(
+            action, lambda *args, **kwargs: action(*args, **kwargs),
+            file_dep_modifier=file_dep, targets_modifier=targets)
+    
+    if action is not None:
+        return decorator(action)
+    else:
+        return decorator
